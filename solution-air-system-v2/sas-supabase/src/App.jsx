@@ -302,6 +302,19 @@ function CRM() {
   );
 }
 
+
+// ── PHONE SHELL ───────────────────────────────────────────
+const PORTAL_CSS = `@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');*{box-sizing:border-box;margin:0;padding:0}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}input,select,textarea{font-family:Outfit,sans-serif;font-size:15px;outline:none;transition:all .2s}.pb{cursor:pointer;border:none;font-family:Outfit,sans-serif;font-weight:600;transition:all .2s;border-radius:14px}.pb:active{transform:scale(.97)}.pc{background:#fff;border-radius:20px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06)}.tbar{display:flex;background:#fff;border-top:1px solid #e2e8f0;position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:50}.tbtn{flex:1;padding:11px 4px 9px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;border:none;background:transparent;font-family:Outfit,sans-serif;font-size:11px;font-weight:500;color:#94a3b8;transition:color .2s}.tbtn.on{color:#1d6fa4}.sl{animation:su .3s ease both}@keyframes su{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}.fade{animation:fi .3s ease both}@keyframes fi{from{opacity:0}to{opacity:1}}.dot{width:8px;height:8px;border-radius:50%;background:#e2e8f0;transition:background .3s}.dot.on{background:#1d6fa4}input[type=date]::-webkit-calendar-picker-indicator{opacity:.5;cursor:pointer}.ov2{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:flex-end;justify-content:center}.sh{background:#fff;border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:430px;max-height:85vh;overflow-y:auto}`;
+
+function PhoneShell({ children }) {
+  return (
+    <div style={{ display:"flex", justifyContent:"center", minHeight:"100vh", background:"linear-gradient(160deg,#e0f2fe,#bfdbfe 50%,#ddd6fe)" }}>
+      <style>{PORTAL_CSS}</style>
+      <div style={{ width:"100%", maxWidth:430, minHeight:"100vh", background:"#f1f5f9", overflow:"hidden", boxShadow:"0 0 60px rgba(0,0,0,.15)" }}>{children}</div>
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════
 //  PORTAL
 // ═══════════════════════════════════════════════════════════
@@ -410,14 +423,7 @@ function Portal() {
 
   const logout = () => { setCliente(null); setScreen("login"); setTab("inicio"); setCitas([]); setHistorial([]); };
 
-  const css = `@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');*{box-sizing:border-box;margin:0;padding:0}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}input,select,textarea{font-family:Outfit,sans-serif;font-size:15px;outline:none;transition:all .2s}.pb{cursor:pointer;border:none;font-family:Outfit,sans-serif;font-weight:600;transition:all .2s;border-radius:14px}.pb:active{transform:scale(.97)}.pc{background:#fff;border-radius:20px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06)}.tbar{display:flex;background:#fff;border-top:1px solid #e2e8f0;position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:50}.tbtn{flex:1;padding:11px 4px 9px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;border:none;background:transparent;font-family:Outfit,sans-serif;font-size:11px;font-weight:500;color:#94a3b8;transition:color .2s}.tbtn.on{color:#1d6fa4}.sl{animation:su .3s ease both}@keyframes su{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}.fade{animation:fi .3s ease both}@keyframes fi{from{opacity:0}to{opacity:1}}.dot{width:8px;height:8px;border-radius:50%;background:#e2e8f0;transition:background .3s}.dot.on{background:#1d6fa4}input[type=date]::-webkit-calendar-picker-indicator{opacity:.5;cursor:pointer}.ov2{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:flex-end;justify-content:center}.sh{background:#fff;border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:430px;max-height:85vh;overflow-y:auto}`;
-
-  const Phone = ({ children }) => (
-    <div style={{ display:"flex", justifyContent:"center", minHeight:"100vh", background:"linear-gradient(160deg,#e0f2fe,#bfdbfe 50%,#ddd6fe)" }}>
-      <style>{css}</style>
-      <div style={{ width:"100%", maxWidth:430, minHeight:"100vh", background:"#f1f5f9", overflow:"hidden", boxShadow:"0 0 60px rgba(0,0,0,.15)" }}>{children}</div>
-    </div>
-  );
+  const Phone = ({ children }) => <PhoneShell>{children}</PhoneShell>;
 
   if (screen === "login") return (
     <Phone>
