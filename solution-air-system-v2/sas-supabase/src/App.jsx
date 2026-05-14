@@ -17,6 +17,7 @@ const db = {
   getClienteByEmail: (email) => db.get("clientes", `email=eq.${encodeURIComponent(email)}&select=*,residencias(*)`),
   createCliente: (d) => db.post("clientes", d),
   createResidencia: (d) => db.post("residencias", d),
+  updateResidencia: (id, d) => db.patch("residencias", id, d),
   updateCliente: (id, d) => db.patch("clientes", id, d),
 
   getCitas: () => db.get("citas", "select=*&order=created_at.desc"),
@@ -25,6 +26,11 @@ const db = {
   updateCita: (id, d) => db.patch("citas", id, d),
 
   getHistorial: (cid) => db.get("historial", `cliente_id=eq.${cid}&order=fecha.desc`),
+
+  getCRMUsuarios: () => db.get("crm_usuarios", "select=*&activo=eq.true"),
+  getCRMUsuarioByEmail: (email) => db.get("crm_usuarios", `email=eq.${encodeURIComponent(email)}`),
+  createCRMUsuario: (d) => db.post("crm_usuarios", d),
+  updateCRMUsuario: (id, d) => db.patch("crm_usuarios", id, d),
 };
 
 // ── HELPERS ───────────────────────────────────────────────
@@ -57,10 +63,156 @@ export default function App() {
   return <Portal />;
 }
 
+
+// ── CRM LOGIN ─────────────────────────────────────────────
+function CRMLogin({ onLogin }) {
+  const [email, setEmail] = useState("");
+  const [pass, setPass] = useState("");
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const login = async () => {
+    if (!email || !pass) { setErr("Completa todos los campos."); return; }
+    setLoading(true);
+    const res = await db.getCRMUsuarioByEmail(email);
+    setLoading(false);
+    if (res && res.length > 0) {
+      const u = res[0];
+      if (!u.activo) { setErr("Usuario inactivo."); return; }
+      if (u.password_hash === pass) { onLogin(u); }
+      else { setErr("Contrasena incorrecta."); }
+    } else {
+      setErr("Email no encontrado.");
+    }
+  };
+
+  return (
+    <div style={{ fontFamily:"Outfit,sans-serif", minHeight:"100vh", background:"linear-gradient(160deg,#f0f9ff,#e0f2fe 60%,#f8fafc)", display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');*{box-sizing:border-box;margin:0;padding:0}`}</style>
+      <div style={{ background:"#fff", borderRadius:24, padding:"36px 32px", boxShadow:"0 4px 24px rgba(0,0,0,.08)", width:"100%", maxWidth:400 }}>
+        <div style={{ textAlign:"center", marginBottom:24 }}>
+          <Logo w={150} />
+          <div style={{ fontSize:13, fontWeight:700, color:"#1d6fa4", letterSpacing:"1px", marginTop:10 }}>ACCESO CRM</div>
+          <div style={{ fontSize:13, color:"#94a3b8", marginTop:4 }}>Solo personal autorizado</div>
+        </div>
+        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+          <div>
+            <label style={{ fontSize:12, fontWeight:600, color:"#475569", display:"block", marginBottom:5 }}>CORREO</label>
+            <input value={email} onChange={e => { setEmail(e.target.value); setErr(""); }} onKeyDown={e => e.key==="Enter"&&login()} placeholder="tu@solutionairsystem.com" autoComplete="email"
+              style={{ width:"100%", padding:"13px 15px", background:"#f8fafc", border:`2px solid ${err?"#fca5a5":"#e2e8f0"}`, borderRadius:12, color:"#0f172a", fontSize:15, fontFamily:"Outfit,sans-serif", outline:"none" }} />
+          </div>
+          <div>
+            <label style={{ fontSize:12, fontWeight:600, color:"#475569", display:"block", marginBottom:5 }}>CONTRASENA</label>
+            <input type="password" value={pass} onChange={e => { setPass(e.target.value); setErr(""); }} onKeyDown={e => e.key==="Enter"&&login()} placeholder="••••••••" autoComplete="current-password"
+              style={{ width:"100%", padding:"13px 15px", background:"#f8fafc", border:`2px solid ${err?"#fca5a5":"#e2e8f0"}`, borderRadius:12, color:"#0f172a", fontSize:15, fontFamily:"Outfit,sans-serif", outline:"none" }} />
+          </div>
+          {err && <div style={{ fontSize:13, color:"#dc2626", background:"#fef2f2", padding:"10px 13px", borderRadius:10, fontWeight:500 }}>⚠️ {err}</div>}
+          <button onClick={login} disabled={loading} style={{ background:"linear-gradient(135deg,#1d6fa4,#0284c7)", color:"#fff", padding:"14px", fontSize:16, borderRadius:12, border:"none", cursor:"pointer", fontWeight:700, fontFamily:"Outfit,sans-serif", boxShadow:"0 6px 16px rgba(29,111,164,.3)" }}>
+            {loading ? "Verificando..." : "Entrar al CRM"}
+          </button>
+        </div>
+        <div style={{ marginTop:20, padding:"12px 14px", background:"#f0f9ff", borderRadius:12, fontSize:12, color:"#0369a1" }}>
+          <div style={{ fontWeight:700, marginBottom:4 }}>Credenciales por defecto:</div>
+          <div>Admin: admin@solutionairsystem.com</div>
+          <div>Secretaria: secretaria@solutionairsystem.com</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── USUARIOS CRM ──────────────────────────────────────────
+function UsuariosCRM({ showToast }) {
+  const [usuarios, setUsuarios] = useState([]);
+  const [modal, setModal] = useState(false);
+  const [form, setForm] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    setLoading(true);
+    const res = await db.getCRMUsuarios();
+    setUsuarios(Array.isArray(res) ? res : []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []); // eslint-disable-line
+
+  const crear = async () => {
+    if (!form.nombre || !form.email || !form.password_hash) return;
+    await db.createCRMUsuario({ nombre:form.nombre, email:form.email, password_hash:form.password_hash, rol:form.rol||"secretaria" });
+    showToast("Usuario creado ✅");
+    setModal(false); setForm({});
+    load();
+  };
+
+  const toggleActivo = async (u) => {
+    await db.updateCRMUsuario(u.id, { activo: !u.activo });
+    showToast(u.activo ? "Usuario desactivado" : "Usuario activado");
+    load();
+  };
+
+  const css = `.cb{cursor:pointer;border:none;border-radius:9px;padding:9px 16px;font-family:Outfit,sans-serif;font-size:14px;font-weight:600;transition:all .2s}.cc{background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 1px 6px rgba(0,0,0,.06)}.ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}.mo{background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:26px;width:480px;max-width:100%;max-height:90vh;overflow-y:auto}.fl{display:flex;flex-direction:column;gap:4px}label{font-size:12px;color:#64748b;display:block;margin-bottom:4px;font-weight:500}input,select{background:#f8fafc;border:1px solid #e2e8f0;color:#1e293b;padding:10px 14px;border-radius:8px;font-family:Outfit,sans-serif;font-size:14px;width:100%;outline:none}`;
+
+  return (
+    <div>
+      <style>{css}</style>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+        <h1 style={{ fontSize:22, fontWeight:800, color:"#0f172a" }}>👥 Usuarios CRM</h1>
+        <button className="cb" onClick={() => { setForm({ rol:"secretaria" }); setModal(true); }} style={{ background:"linear-gradient(135deg,#1d6fa4,#0284c7)", color:"#fff", padding:"10px 18px" }}>+ Nuevo usuario</button>
+      </div>
+      {loading ? <div style={{ textAlign:"center", padding:40, color:"#94a3b8" }}>Cargando...</div> : (
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:14 }}>
+          {usuarios.map(u => (
+            <div key={u.id} className="cc" style={{ padding:18 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
+                <div style={{ width:44, height:44, borderRadius:"50%", background:`linear-gradient(135deg,${u.rol==="admin"?"#7c3aed,#6d28d9":"#1d6fa4,#0284c7"})`, display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontWeight:700, fontSize:18 }}>
+                  {u.nombre.slice(0,2).toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontWeight:700, fontSize:15 }}>{u.nombre}</div>
+                  <div style={{ fontSize:12, color:"#64748b", textTransform:"capitalize" }}>{u.rol}</div>
+                </div>
+                <span style={{ marginLeft:"auto", fontSize:11, fontWeight:600, padding:"2px 8px", borderRadius:10, background:u.activo?"#dcfce7":"#fee2e2", color:u.activo?"#15803d":"#dc2626" }}>{u.activo?"Activo":"Inactivo"}</span>
+              </div>
+              <div style={{ fontSize:13, color:"#64748b", marginBottom:12 }}>📧 {u.email}</div>
+              <button onClick={() => toggleActivo(u)} style={{ width:"100%", padding:"8px", borderRadius:8, border:`1px solid ${u.activo?"#fecaca":"#bbf7d0"}`, background:u.activo?"#fef2f2":"#f0fdf4", color:u.activo?"#dc2626":"#15803d", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontSize:13, fontWeight:600 }}>
+                {u.activo ? "Desactivar" : "Activar"}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      {modal && (
+        <div className="ov" onClick={() => { setModal(false); setForm({}); }}>
+          <div className="mo" onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight:800, fontSize:18, marginBottom:16, color:"#0f172a" }}>👥 Nuevo usuario CRM</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:13 }}>
+              <div className="fl"><label>Nombre completo *</label><input value={form.nombre||""} onChange={e=>setForm(p=>({...p,nombre:e.target.value}))}/></div>
+              <div className="fl"><label>Email *</label><input type="email" value={form.email||""} onChange={e=>setForm(p=>({...p,email:e.target.value}))}/></div>
+              <div className="fl"><label>Contrasena *</label><input type="password" value={form.password_hash||""} onChange={e=>setForm(p=>({...p,password_hash:e.target.value}))}/></div>
+              <div className="fl"><label>Rol</label>
+                <select value={form.rol||"secretaria"} onChange={e=>setForm(p=>({...p,rol:e.target.value}))}>
+                  <option value="secretaria">Secretaria</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:10, marginTop:20 }}>
+              <button className="cb" onClick={()=>{setModal(false);setForm({});}} style={{ flex:1, background:"#f1f5f9", color:"#64748b", padding:"12px" }}>Cancelar</button>
+              <button className="cb" onClick={crear} style={{ flex:2, background:"linear-gradient(135deg,#1d6fa4,#0284c7)", color:"#fff", padding:"12px" }}>Crear usuario</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════
 //  CRM
 // ═══════════════════════════════════════════════════════════
 function CRM() {
+  const [usuario, setUsuario] = useState(null);
   const [tab, setTab] = useState("citas");
   const [clientes, setClientes] = useState([]);
   const [citas, setCitas] = useState([]);
@@ -78,7 +230,9 @@ function CRM() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []); // eslint-disable-line
+  useEffect(() => { if(usuario) load(); }, [usuario]); // eslint-disable-line
+
+  if (!usuario) return <CRMLogin onLogin={(u) => setUsuario(u)} />;
 
   const showToast = (msg, type = "ok") => { setToast({ msg, type }); setTimeout(() => setToast(null), 4000); };
 
@@ -103,12 +257,24 @@ function CRM() {
   const crearCliente = async () => {
     if (!form.nombre || !form.email) return;
     const avatar = form.nombre.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
-    const res = await db.createCliente({ nombre: form.nombre, email: form.email, telefono: form.telefono || "", avatar });
+    // Generate temp password from phone last 4 digits or default
+    const tempPass = form.telefono ? form.telefono.slice(-4) : "1234";
+    const res = await db.createCliente({ nombre: form.nombre, email: form.email, password_hash: tempPass, telefono: form.telefono || "", avatar });
     const cl = Array.isArray(res) ? res[0] : res;
-    if (cl?.id && form.direccion) {
-      await db.createResidencia({ cliente_id: cl.id, nombre: "Residencia principal", direccion: form.direccion, equipos: form.equipos || "" });
+    if (cl?.id) {
+      await db.createResidencia({
+        cliente_id: cl.id,
+        nombre: form.resNombre || "Residencia principal",
+        direccion: form.direccion || "",
+        equipos: form.equipos || "",
+        marca: form.marca || "",
+        modelo: form.modelo || "",
+        serie: form.serie || "",
+        fecha_instalacion: form.fecha_instalacion || null,
+        lat: null, lng: null
+      });
     }
-    showToast("Cliente creado ✅");
+    showToast("Cliente creado ✅ Contrasena temporal: " + tempPass);
     setModal(null); setForm({});
     load();
   };
@@ -137,6 +303,15 @@ function CRM() {
         <Nav id="citas"     icon="📅" label="Gestion de citas"  badge={pendientes.length} />
         <Nav id="clientes"  icon="👤" label="Clientes" />
         <Nav id="historial" icon="🔧" label="Historial" />
+        {usuario?.rol === "admin" && <Nav id="usuarios" icon="👥" label="Usuarios CRM" />}
+        <div style={{ borderTop:"1px solid #e2e8f0", margin:"8px 4px" }} />
+        <div style={{ padding:"8px 14px" }}>
+          <div style={{ fontSize:13, fontWeight:600, color:"#0f172a" }}>{usuario?.nombre}</div>
+          <div style={{ fontSize:11, color:"#94a3b8", marginTop:1, textTransform:"capitalize" }}>{usuario?.rol}</div>
+        </div>
+        <div onClick={() => setUsuario(null)} style={{ cursor:"pointer", padding:"9px 14px", borderRadius:8, display:"flex", alignItems:"center", gap:10, fontSize:13, fontWeight:500, color:"#ef4444", margin:"0 4px" }}>
+          🚪 Cerrar sesion
+        </div>
       </div>
 
       {/* MAIN */}
@@ -189,6 +364,11 @@ function CRM() {
               {citas.length === 0 && <div style={{ padding:40, textAlign:"center", color:"#94a3b8" }}>Sin citas aun.</div>}
             </div>
           </div>
+        )}
+
+        {/* USUARIOS CRM */}
+        {!loading && tab === "usuarios" && usuario?.rol === "admin" && (
+          <UsuariosCRM showToast={showToast} />
         )}
 
         {/* CLIENTES */}
@@ -283,13 +463,40 @@ function CRM() {
           <div className="mo" onClick={e => e.stopPropagation()}>
             <div style={{ fontWeight:800, fontSize:18, marginBottom:16, color:"#0f172a" }}>👤 Nuevo cliente</div>
             <div style={{ display:"flex", flexDirection:"column", gap:13 }}>
-              <div className="fl"><label>Nombre completo *</label><input value={form.nombre || ""} onChange={e => setForm(p => ({ ...p, nombre:e.target.value }))} /></div>
-              <div className="g2">
-                <div className="fl"><label>Email *</label><input type="email" value={form.email || ""} onChange={e => setForm(p => ({ ...p, email:e.target.value }))} /></div>
-                <div className="fl"><label>Telefono</label><input value={form.telefono || ""} onChange={e => setForm(p => ({ ...p, telefono:e.target.value }))} /></div>
+              <div style={{ background:"#f0f9ff", border:"1px solid #bae6fd", borderRadius:12, padding:"12px 14px" }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#0369a1", marginBottom:10 }}>👤 Datos del cliente</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  <div className="fl"><label>Nombre completo *</label><input value={form.nombre || ""} onChange={e => setForm(p => ({ ...p, nombre:e.target.value }))} /></div>
+                  <div className="g2">
+                    <div className="fl"><label>Email *</label><input type="email" value={form.email || ""} onChange={e => setForm(p => ({ ...p, email:e.target.value }))} /></div>
+                    <div className="fl"><label>Telefono</label><input value={form.telefono || ""} onChange={e => setForm(p => ({ ...p, telefono:e.target.value }))} /></div>
+                  </div>
+                </div>
               </div>
-              <div className="fl"><label>Direccion principal</label><input value={form.direccion || ""} onChange={e => setForm(p => ({ ...p, direccion:e.target.value }))} placeholder="Calle, Colonia, Ciudad" /></div>
-              <div className="fl"><label>Equipos de AC</label><input value={form.equipos || ""} onChange={e => setForm(p => ({ ...p, equipos:e.target.value }))} placeholder="Ej: Minisplit 1 ton LG" /></div>
+              <div style={{ background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:12, padding:"12px 14px" }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#15803d", marginBottom:10 }}>🏠 Residencia</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  <div className="fl"><label>Nombre de residencia</label><input value={form.resNombre || ""} onChange={e => setForm(p => ({ ...p, resNombre:e.target.value }))} placeholder="Casa principal, Oficina..." /></div>
+                  <div className="fl"><label>Direccion</label><input value={form.direccion || ""} onChange={e => setForm(p => ({ ...p, direccion:e.target.value }))} placeholder="Calle, Colonia, Ciudad" /></div>
+                </div>
+              </div>
+              <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:12, padding:"12px 14px" }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#a16207", marginBottom:10 }}>❄️ Equipo instalado</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  <div className="fl"><label>Descripcion</label><input value={form.equipos || ""} onChange={e => setForm(p => ({ ...p, equipos:e.target.value }))} placeholder="Minisplit 1.5 ton" /></div>
+                  <div className="g2">
+                    <div className="fl"><label>Marca</label><input value={form.marca || ""} onChange={e => setForm(p => ({ ...p, marca:e.target.value }))} placeholder="LG, Carrier..." /></div>
+                    <div className="fl"><label>Modelo</label><input value={form.modelo || ""} onChange={e => setForm(p => ({ ...p, modelo:e.target.value }))} placeholder="LV181HV4" /></div>
+                  </div>
+                  <div className="g2">
+                    <div className="fl"><label>No. de serie</label><input value={form.serie || ""} onChange={e => setForm(p => ({ ...p, serie:e.target.value }))} placeholder="SN-123456" /></div>
+                    <div className="fl"><label>Fecha instalacion</label><input type="date" value={form.fecha_instalacion || ""} onChange={e => setForm(p => ({ ...p, fecha_instalacion:e.target.value }))} /></div>
+                  </div>
+                </div>
+              </div>
+              <div style={{ background:"#f1f5f9", border:"1px solid #e2e8f0", borderRadius:10, padding:"10px 14px", fontSize:12, color:"#64748b" }}>
+                💡 La contrasena temporal sera los ultimos 4 digitos del telefono
+              </div>
             </div>
             <div style={{ display:"flex", gap:10, marginTop:20 }}>
               <button className="cb" onClick={() => { setModal(null); setForm({}); }} style={{ flex:1, background:"#f1f5f9", color:"#64748b", padding:"12px" }}>Cancelar</button>
@@ -302,6 +509,52 @@ function CRM() {
   );
 }
 
+
+// ── LOGIN SCREEN (stable component - fixes input focus bug) ──────────────
+function LoginScreen({ lf, setLf, loading, onSubmit, onRegister }) {
+  return (
+    <PhoneShell>
+      <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:"#f1f5f9" }}>
+        <div style={{ background:"#fff", padding:"48px 28px 28px", textAlign:"center", boxShadow:"0 2px 16px rgba(0,0,0,.06)" }}>
+          <Logo w={160} />
+          <div style={{ fontSize:12, fontWeight:600, color:"#1d6fa4", letterSpacing:"1px", marginTop:10 }}>PORTAL DE CLIENTES</div>
+        </div>
+        <div style={{ flex:1, padding:"28px 20px 40px" }}>
+          <div style={{ fontSize:21, fontWeight:700, color:"#0f172a", marginBottom:4 }}>Bienvenido 👋</div>
+          <div style={{ fontSize:14, color:"#64748b", marginBottom:22 }}>Inicia sesion para ver tu cuenta</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:13 }}>
+            <div>
+              <label style={{ fontSize:12, fontWeight:600, color:"#475569", display:"block", marginBottom:5 }}>CORREO</label>
+              <input
+                value={lf.email}
+                onChange={e => setLf(p => ({ ...p, email:e.target.value, err:"" }))}
+                onKeyDown={e => e.key === "Enter" && onSubmit()}
+                placeholder="tu@correo.com"
+                autoComplete="email"
+                style={{ width:"100%", padding:"13px 15px", background:"#fff", border:`2px solid ${lf.err ? "#fca5a5" : "#e2e8f0"}`, borderRadius:13, color:"#0f172a", fontSize:16, fontFamily:"Outfit,sans-serif", outline:"none" }}
+              />
+            </div>
+            <div>
+              <label style={{ fontSize:12, fontWeight:600, color:"#475569", display:"block", marginBottom:5 }}>CONTRASENA</label>
+              <input
+                type="password"
+                value={lf.pass}
+                onChange={e => setLf(p => ({ ...p, pass:e.target.value, err:"" }))}
+                onKeyDown={e => e.key === "Enter" && onSubmit()}
+                placeholder="••••••••"
+                autoComplete="current-password"
+                style={{ width:"100%", padding:"13px 15px", background:"#fff", border:`2px solid ${lf.err ? "#fca5a5" : "#e2e8f0"}`, borderRadius:13, color:"#0f172a", fontSize:16, fontFamily:"Outfit,sans-serif", outline:"none" }}
+              />
+            </div>
+            {lf.err && <div style={{ fontSize:13, color:"#dc2626", background:"#fef2f2", padding:"10px 13px", borderRadius:10, fontWeight:500 }}>⚠️ {lf.err}</div>}
+            <button onClick={onSubmit} disabled={loading} style={{ background:"linear-gradient(135deg,#1d6fa4,#0284c7)", color:"#fff", padding:"15px", fontSize:16, marginTop:4, boxShadow:"0 8px 20px rgba(29,111,164,.35)", border:"none", borderRadius:14, fontFamily:"Outfit,sans-serif", fontWeight:600, cursor:"pointer" }}>{loading ? "Verificando..." : "Entrar"}</button>
+            <button onClick={onRegister} style={{ background:"#f1f5f9", color:"#1d6fa4", padding:"13px", fontSize:15, border:"2px solid #bfdbfe", borderRadius:14, fontFamily:"Outfit,sans-serif", fontWeight:600, cursor:"pointer" }}>Crear cuenta nueva</button>
+          </div>
+        </div>
+      </div>
+    </PhoneShell>
+  );
+}
 
 // ── PHONE SHELL ───────────────────────────────────────────
 const PORTAL_CSS = `@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');*{box-sizing:border-box;margin:0;padding:0}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}input,select,textarea{font-family:Outfit,sans-serif;font-size:15px;outline:none;transition:all .2s}.pb{cursor:pointer;border:none;font-family:Outfit,sans-serif;font-weight:600;transition:all .2s;border-radius:14px}.pb:active{transform:scale(.97)}.pc{background:#fff;border-radius:20px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06)}.tbar{display:flex;background:#fff;border-top:1px solid #e2e8f0;position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:50}.tbtn{flex:1;padding:11px 4px 9px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;border:none;background:transparent;font-family:Outfit,sans-serif;font-size:11px;font-weight:500;color:#94a3b8;transition:color .2s}.tbtn.on{color:#1d6fa4}.sl{animation:su .3s ease both}@keyframes su{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}.fade{animation:fi .3s ease both}@keyframes fi{from{opacity:0}to{opacity:1}}.dot{width:8px;height:8px;border-radius:50%;background:#e2e8f0;transition:background .3s}.dot.on{background:#1d6fa4}input[type=date]::-webkit-calendar-picker-indicator{opacity:.5;cursor:pointer}.ov2{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:flex-end;justify-content:center}.sh{background:#fff;border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:430px;max-height:85vh;overflow-y:auto}`;
@@ -330,7 +583,7 @@ function Portal() {
   const [exito, setExito] = useState(false);
   const [detalle, setDetalle] = useState(null);
   const [resModal, setResModal] = useState(false);
-  const [newRes, setNewRes] = useState({ nombre:"", direccion:"", equipos:"", lat:null, lng:null });
+  const [newRes, setNewRes] = useState({ nombre:"", direccion:"", equipos:"", marca:"", modelo:"", serie:"", fecha_instalacion:"", lat:null, lng:null });
   const [gpsLoad, setGpsLoad] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -345,18 +598,29 @@ function Portal() {
   const login = async () => {
     if (!lf.email || !lf.pass) return;
     setLoading(true);
-    const res = await db.getClienteByEmail(lf.email);
-    setLoading(false);
-    if (res && res.length > 0) {
-      const cl = res[0];
-      if (cl.password_hash === lf.pass) {
-        setCliente(cl); setScreen("app"); setLf({ email:"", pass:"", err:"" });
-        loadData(cl);
+    try {
+      const res = await db.getClienteByEmail(lf.email);
+      if (res && res.length > 0) {
+        const cl = res[0];
+        if (cl.password_hash === lf.pass) {
+          const [cts, hist] = await Promise.all([db.getCitasByCliente(cl.id), db.getHistorial(cl.id)]);
+          setCitas(Array.isArray(cts) ? cts : []);
+          setHistorial(Array.isArray(hist) ? hist : []);
+          setCliente(cl);
+          setLoading(false);
+          setLf({ email:"", pass:"", err:"" });
+          setScreen("app");
+        } else {
+          setLf(p => ({ ...p, err:"Contrasena incorrecta." }));
+          setLoading(false);
+        }
       } else {
-        setLf(p => ({ ...p, err:"Contrasena incorrecta." }));
+        setLf(p => ({ ...p, err:"Email no encontrado. Registrate primero." }));
+        setLoading(false);
       }
-    } else {
-      setLf(p => ({ ...p, err:"Email no encontrado. Registrate primero." }));
+    } catch(e) {
+      setLf(p => ({ ...p, err:"Error de conexion. Intenta de nuevo." }));
+      setLoading(false);
     }
   };
 
@@ -364,19 +628,26 @@ function Portal() {
     if (!rf.nombre || !rf.email || !rf.pass || !rf.tel) { setRf(p => ({ ...p, err:"Completa todos los campos." })); return; }
     if (rf.pass !== rf.pass2) { setRf(p => ({ ...p, err:"Las contrasenas no coinciden." })); return; }
     setLoading(true);
-    const exist = await db.getClienteByEmail(rf.email);
-    if (exist && exist.length > 0) { setRf(p => ({ ...p, err:"Este email ya esta registrado." })); setLoading(false); return; }
-    const avatar = rf.nombre.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
-    const res = await db.createCliente({ nombre:rf.nombre, email:rf.email, password_hash:rf.pass, telefono:rf.tel, avatar });
-    const cl = Array.isArray(res) ? res[0] : res;
-    if (cl?.id) {
-      await db.createResidencia({ cliente_id:cl.id, nombre:"Mi residencia", direccion:rf.direccion || "Por definir", lat:rf.lat, lng:rf.lng, equipos:"" });
+    try {
+      const exist = await db.getClienteByEmail(rf.email);
+      if (exist && exist.length > 0) { setRf(p => ({ ...p, err:"Este email ya esta registrado." })); setLoading(false); return; }
+      const avatar = rf.nombre.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+      const res = await db.createCliente({ nombre:rf.nombre, email:rf.email, password_hash:rf.pass, telefono:rf.tel, avatar });
+      const cl = Array.isArray(res) ? res[0] : res;
+      if (!cl?.id) { setRf(p => ({ ...p, err:"Error al crear cuenta. Intenta de nuevo." })); setLoading(false); return; }
+      await db.createResidencia({ cliente_id:cl.id, nombre:"Mi residencia", direccion:rf.direccion || "Por definir", lat:rf.lat||null, lng:rf.lng||null, equipos:"" });
       const clFull = await db.getClienteByEmail(rf.email);
-      setCliente(clFull[0]);
-      loadData(clFull[0]);
+      const clienteFinal = Array.isArray(clFull) && clFull.length > 0 ? clFull[0] : cl;
+      const [cts, hist] = await Promise.all([db.getCitasByCliente(clienteFinal.id), db.getHistorial(clienteFinal.id)]);
+      setCitas(Array.isArray(cts) ? cts : []);
+      setHistorial(Array.isArray(hist) ? hist : []);
+      setCliente(clienteFinal);
+      setLoading(false);
+      setScreen("app");
+    } catch(e) {
+      setRf(p => ({ ...p, err:"Error de conexion. Intenta de nuevo." }));
+      setLoading(false);
     }
-    setLoading(false);
-    setScreen("app");
   };
 
   const getGPS = (target) => {
@@ -394,10 +665,23 @@ function Portal() {
 
   const addResidencia = async () => {
     if (!newRes.nombre || !newRes.direccion) return;
-    await db.createResidencia({ cliente_id:cliente.id, nombre:newRes.nombre, direccion:newRes.direccion, lat:newRes.lat, lng:newRes.lng, equipos:newRes.equipos || "" });
-    const clFull = await db.getClienteByEmail(cliente.email);
-    setCliente(clFull[0]);
-    setNewRes({ nombre:"", direccion:"", equipos:"", lat:null, lng:null });
+    try {
+      await db.createResidencia({
+        cliente_id:cliente.id, nombre:newRes.nombre, direccion:newRes.direccion,
+        lat:newRes.lat||null, lng:newRes.lng||null, equipos:newRes.equipos||"",
+        marca:newRes.marca||"", modelo:newRes.modelo||"", serie:newRes.serie||"",
+        fecha_instalacion:newRes.fecha_instalacion||null
+      });
+      const clFull = await db.getClienteByEmail(cliente.email);
+      const clActual = Array.isArray(clFull) && clFull.length > 0 ? clFull[0] : cliente;
+      setCliente(clActual);
+      setNewRes({ nombre:"", direccion:"", equipos:"", marca:"", modelo:"", serie:"", fecha_instalacion:"", lat:null, lng:null });
+      setResModal(false);
+    } catch(e) {
+      alert("Error al guardar. Intenta de nuevo.");
+    }
+  };
+    setNewRes({ nombre:"", direccion:"", equipos:"", marca:"", modelo:"", serie:"", fecha_instalacion:"", lat:null, lng:null });
     setResModal(false);
   };
 
@@ -425,36 +709,10 @@ function Portal() {
 
   const Phone = ({ children }) => <PhoneShell>{children}</PhoneShell>;
 
-  if (screen === "login") return (
-    <Phone>
-      <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column", background:"#f1f5f9" }}>
-        <div style={{ background:"#fff", padding:"48px 28px 28px", textAlign:"center", boxShadow:"0 2px 16px rgba(0,0,0,.06)" }}>
-          <Logo w={160} />
-          <div style={{ fontSize:12, fontWeight:600, color:"#1d6fa4", letterSpacing:"1px", marginTop:10 }}>PORTAL DE CLIENTES</div>
-        </div>
-        <div style={{ flex:1, padding:"28px 20px 40px" }}>
-          <div style={{ fontSize:21, fontWeight:700, color:"#0f172a", marginBottom:4 }}>Bienvenido 👋</div>
-          <div style={{ fontSize:14, color:"#64748b", marginBottom:22 }}>Inicia sesion para ver tu cuenta</div>
-          <div style={{ display:"flex", flexDirection:"column", gap:13 }}>
-            <div>
-              <label style={{ fontSize:12, fontWeight:600, color:"#475569", display:"block", marginBottom:5 }}>CORREO</label>
-              <input value={lf.email} onChange={e => setLf(p => ({ ...p, email:e.target.value }))} onKeyDown={e => e.key === "Enter" && login()} placeholder="tu@correo.com" style={{ width:"100%", padding:"13px 15px", background:"#fff", border:`2px solid ${lf.err ? "#fca5a5" : "#e2e8f0"}`, borderRadius:13, color:"#0f172a" }} />
-            </div>
-            <div>
-              <label style={{ fontSize:12, fontWeight:600, color:"#475569", display:"block", marginBottom:5 }}>CONTRASENA</label>
-              <input type="password" value={lf.pass} onChange={e => setLf(p => ({ ...p, pass:e.target.value }))} onKeyDown={e => e.key === "Enter" && login()} placeholder="••••••••" style={{ width:"100%", padding:"13px 15px", background:"#fff", border:`2px solid ${lf.err ? "#fca5a5" : "#e2e8f0"}`, borderRadius:13, color:"#0f172a" }} />
-            </div>
-            {lf.err && <div style={{ fontSize:13, color:"#dc2626", background:"#fef2f2", padding:"10px 13px", borderRadius:10, fontWeight:500 }}>⚠️ {lf.err}</div>}
-            <button className="pb" onClick={login} disabled={loading} style={{ background:"linear-gradient(135deg,#1d6fa4,#0284c7)", color:"#fff", padding:"15px", fontSize:16, marginTop:4, boxShadow:"0 8px 20px rgba(29,111,164,.35)" }}>{loading ? "Verificando..." : "Entrar"}</button>
-            <button className="pb" onClick={() => setScreen("registro")} style={{ background:"#f1f5f9", color:"#1d6fa4", padding:"13px", fontSize:15, border:"2px solid #bfdbfe" }}>Crear cuenta nueva</button>
-          </div>
-        </div>
-      </div>
-    </Phone>
-  );
+  if (screen === "login") return <LoginScreen lf={lf} setLf={setLf} loading={loading} onSubmit={login} onRegister={() => setScreen("registro")} />;
 
   if (screen === "registro") return (
-    <Phone>
+    <PhoneShell>
       <div style={{ minHeight:"100vh", display:"flex", flexDirection:"column" }}>
         <div style={{ background:"linear-gradient(135deg,#1d6fa4,#0284c7)", padding:"50px 22px 24px" }}>
           <div style={{ fontSize:22, fontWeight:800, color:"#fff" }}>Crear cuenta 👤</div>
@@ -487,12 +745,12 @@ function Portal() {
           </div>
         </div>
       </div>
-    </Phone>
+    </PhoneShell>
   );
 
   const lastServ = historial[0];
   return (
-    <Phone>
+    <PhoneShell>
       <div style={{ paddingBottom:80, minHeight:"100vh", background:"#f1f5f9" }}>
 
         {tab === "inicio" && (
@@ -547,17 +805,40 @@ function Portal() {
             </div>
             <div style={{ padding:"16px 14px", display:"flex", flexDirection:"column", gap:12 }}>
               <button className="pb" onClick={() => setResModal(true)} style={{ background:"linear-gradient(135deg,#1d6fa4,#0284c7)", color:"#fff", padding:"14px", fontSize:15 }}>+ Agregar residencia</button>
-              {misRes.map(r => (
-                <div key={r.id} className="pc">
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
-                    <div style={{ fontSize:16, fontWeight:700, color:"#0f172a" }}>🏠 {r.nombre}</div>
-                    {r.lat && r.lng && <a href={`https://maps.google.com/?q=${r.lat},${r.lng}`} target="_blank" rel="noreferrer" style={{ background:"#dcfce7", color:"#15803d", padding:"6px 12px", borderRadius:8, fontSize:12, fontWeight:600, textDecoration:"none" }}>🗺 Maps</a>}
+              {misRes.map(r => {
+                const dias = diasParaMant(r.fecha_instalacion);
+                const next = nextMant(r.fecha_instalacion);
+                return (
+                  <div key={r.id} className="pc">
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
+                      <div style={{ fontSize:16, fontWeight:700, color:"#0f172a" }}>🏠 {r.nombre}</div>
+                      {r.lat && r.lng && <a href={`https://maps.google.com/?q=${r.lat},${r.lng}`} target="_blank" rel="noreferrer" style={{ background:"#dcfce7", color:"#15803d", padding:"6px 12px", borderRadius:8, fontSize:12, fontWeight:600, textDecoration:"none" }}>🗺 Maps</a>}
+                    </div>
+                    <div style={{ fontSize:14, color:"#475569", marginBottom:6 }}>📍 {r.direccion}</div>
+                    {r.equipos && <div style={{ fontSize:13, color:"#64748b", marginBottom:4 }}>❄️ {r.equipos}</div>}
+                    {r.marca && (
+                      <div style={{ background:"#f0f9ff", border:"1px solid #bae6fd", borderRadius:10, padding:"10px 13px", marginTop:6, display:"flex", flexDirection:"column", gap:4 }}>
+                        {r.marca && <div style={{ fontSize:13, color:"#0369a1" }}>🏷️ <b>Marca:</b> {r.marca}</div>}
+                        {r.modelo && <div style={{ fontSize:13, color:"#0369a1" }}>📋 <b>Modelo:</b> {r.modelo}</div>}
+                        {r.serie && <div style={{ fontSize:13, color:"#0369a1" }}>🔢 <b>No. Serie:</b> {r.serie}</div>}
+                        {r.fecha_instalacion && <div style={{ fontSize:13, color:"#0369a1" }}>📅 <b>Instalado:</b> {fmt(r.fecha_instalacion)}</div>}
+                      </div>
+                    )}
+                    {next && (
+                      <div style={{ background: dias <= 30 ? "#fef9c3" : "#f0fdf4", border:`1px solid ${dias <= 30 ? "#fde68a" : "#bbf7d0"}`, borderRadius:10, padding:"10px 13px", marginTop:8, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                        <div>
+                          <div style={{ fontSize:12, fontWeight:700, color: dias <= 30 ? "#a16207" : "#15803d" }}>🔧 Proximo mantenimiento</div>
+                          <div style={{ fontSize:13, color:"#475569", marginTop:2 }}>{fmt(next)}</div>
+                        </div>
+                        <div style={{ fontSize:12, fontWeight:700, color: dias <= 30 ? "#a16207" : "#15803d", textAlign:"right" }}>
+                          {dias <= 0 ? "¡Vencido!" : dias <= 30 ? `En ${dias}d ⚠️` : `En ${dias}d`}
+                        </div>
+                      </div>
+                    )}
+                    {r.lat && r.lng && <div style={{ fontSize:12, color:"#10b981", marginTop:6 }}>✅ GPS guardado</div>}
                   </div>
-                  <div style={{ fontSize:14, color:"#475569" }}>📍 {r.direccion}</div>
-                  {r.equipos && <div style={{ fontSize:13, color:"#94a3b8", marginTop:4 }}>❄️ {r.equipos}</div>}
-                  {r.lat && r.lng && <div style={{ fontSize:12, color:"#10b981", marginTop:4 }}>✅ GPS guardado</div>}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -757,33 +1038,46 @@ function Portal() {
       </div>
 
       {resModal && (
-        <div className="ov2" onClick={() => setResModal(false)}>
-          <div className="sh" onClick={e => e.stopPropagation()}>
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:100, display:"flex", alignItems:"flex-end", justifyContent:"center" }} onClick={() => setResModal(false)}>
+          <div style={{ background:"#fff", borderRadius:"24px 24px 0 0", padding:24, width:"100%", maxWidth:430, maxHeight:"85vh", overflowY:"auto", fontFamily:"Outfit,sans-serif" }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize:18, fontWeight:800, color:"#0f172a", marginBottom:16 }}>🏠 Nueva residencia</div>
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              <div>
-                <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>NOMBRE *</label>
-                <input value={newRes.nombre} onChange={e => setNewRes(p => ({ ...p, nombre:e.target.value }))} placeholder="Casa de verano, Local..." style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14 }} />
+              <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>NOMBRE *</label>
+                <input value={newRes.nombre} onChange={e => setNewRes(p => ({ ...p, nombre:e.target.value }))} placeholder="Casa de verano, Local..." style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
               </div>
-              <div>
-                <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>DIRECCION *</label>
-                <input value={newRes.direccion} onChange={e => setNewRes(p => ({ ...p, direccion:e.target.value }))} placeholder="Calle, Colonia, Ciudad" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14 }} />
+              <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>DIRECCION *</label>
+                <input value={newRes.direccion} onChange={e => setNewRes(p => ({ ...p, direccion:e.target.value }))} placeholder="Calle, Colonia, Ciudad" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
               </div>
-              <div>
-                <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>EQUIPOS AC</label>
-                <input value={newRes.equipos} onChange={e => setNewRes(p => ({ ...p, equipos:e.target.value }))} placeholder="Ej: 2 Minisplits LG" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14 }} />
+              <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>DESCRIPCION DEL EQUIPO</label>
+                <input value={newRes.equipos} onChange={e => setNewRes(p => ({ ...p, equipos:e.target.value }))} placeholder="Ej: Minisplit 1.5 ton" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
               </div>
-              <button className="pb" onClick={() => getGPS("res")} style={{ background: newRes.lat ? "#dcfce7" : "#1d6fa4", color: newRes.lat ? "#15803d" : "#fff", padding:"12px", fontSize:14, borderRadius:12 }}>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>MARCA</label>
+                  <input value={newRes.marca||""} onChange={e => setNewRes(p => ({ ...p, marca:e.target.value }))} placeholder="LG, Carrier..." style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                </div>
+                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>MODELO</label>
+                  <input value={newRes.modelo||""} onChange={e => setNewRes(p => ({ ...p, modelo:e.target.value }))} placeholder="LV181HV4" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                </div>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>NO. DE SERIE</label>
+                  <input value={newRes.serie||""} onChange={e => setNewRes(p => ({ ...p, serie:e.target.value }))} placeholder="SN-123456" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                </div>
+                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>FECHA INSTALACION</label>
+                  <input type="date" value={newRes.fecha_instalacion||""} onChange={e => setNewRes(p => ({ ...p, fecha_instalacion:e.target.value }))} style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                </div>
+              </div>
+              <button onClick={() => getGPS("res")} style={{ background:newRes.lat?"#dcfce7":"#1d6fa4", color:newRes.lat?"#15803d":"#fff", padding:"12px", fontSize:14, borderRadius:12, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>
                 {gpsLoad ? "Obteniendo..." : newRes.lat ? "✅ GPS guardado" : "📍 Guardar ubicacion GPS"}
               </button>
               <div style={{ display:"flex", gap:10, marginTop:4 }}>
-                <button className="pb" onClick={() => setResModal(false)} style={{ flex:1, background:"#f1f5f9", color:"#64748b", padding:"13px" }}>Cancelar</button>
-                <button className="pb" onClick={addResidencia} style={{ flex:2, background:"linear-gradient(135deg,#10b981,#059669)", color:"#fff", padding:"13px" }}>Guardar</button>
+                <button onClick={() => setResModal(false)} style={{ flex:1, background:"#f1f5f9", color:"#64748b", padding:"13px", borderRadius:14, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>Cancelar</button>
+                <button onClick={addResidencia} style={{ flex:2, background:"linear-gradient(135deg,#10b981,#059669)", color:"#fff", padding:"13px", borderRadius:14, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>Guardar</button>
               </div>
             </div>
           </div>
         </div>
       )}
-    </Phone>
+    </PhoneShell>
   );
 }
