@@ -222,8 +222,6 @@ function CRM() {
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  if (!usuario) return <CRMLogin onLogin={(u) => setUsuario(u)} />;
-
   const load = async () => {
     setLoading(true);
     const [cls, cts] = await Promise.all([db.getClientes(), db.getCitas()]);
@@ -232,7 +230,9 @@ function CRM() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []); // eslint-disable-line
+  useEffect(() => { if(usuario) load(); }, [usuario]); // eslint-disable-line
+
+  if (!usuario) return <CRMLogin onLogin={(u) => setUsuario(u)} />;
 
   const showToast = (msg, type = "ok") => { setToast({ msg, type }); setTimeout(() => setToast(null), 4000); };
 
