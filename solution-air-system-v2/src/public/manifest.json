@@ -1,0 +1,17 @@
+{
+  "short_name": "SAS Portal",
+  "name": "Solution Air System",
+  "description": "Portal de clientes Solution Air System",
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#1d6fa4",
+  "background_color": "#f0f9ff",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}
