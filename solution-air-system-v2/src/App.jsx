@@ -665,9 +665,22 @@ function Portal() {
 
   const addResidencia = async () => {
     if (!newRes.nombre || !newRes.direccion) return;
-    await db.createResidencia({ cliente_id:cliente.id, nombre:newRes.nombre, direccion:newRes.direccion, lat:newRes.lat, lng:newRes.lng, equipos:newRes.equipos||"" , marca:newRes.marca||"", modelo:newRes.modelo||"", serie:newRes.serie||"", fecha_instalacion:newRes.fecha_instalacion||null });
-    const clFull = await db.getClienteByEmail(cliente.email);
-    setCliente(clFull[0]);
+    try {
+      await db.createResidencia({
+        cliente_id:cliente.id, nombre:newRes.nombre, direccion:newRes.direccion,
+        lat:newRes.lat||null, lng:newRes.lng||null, equipos:newRes.equipos||"",
+        marca:newRes.marca||"", modelo:newRes.modelo||"", serie:newRes.serie||"",
+        fecha_instalacion:newRes.fecha_instalacion||null
+      });
+      const clFull = await db.getClienteByEmail(cliente.email);
+      const clActual = Array.isArray(clFull) && clFull.length > 0 ? clFull[0] : cliente;
+      setCliente(clActual);
+      setNewRes({ nombre:"", direccion:"", equipos:"", marca:"", modelo:"", serie:"", fecha_instalacion:"", lat:null, lng:null });
+      setResModal(false);
+    } catch(e) {
+      alert("Error al guardar. Intenta de nuevo.");
+    }
+  };
     setNewRes({ nombre:"", direccion:"", equipos:"", marca:"", modelo:"", serie:"", fecha_instalacion:"", lat:null, lng:null });
     setResModal(false);
   };
@@ -1025,48 +1038,41 @@ function Portal() {
       </div>
 
       {resModal && (
-        <div className="ov2" onClick={() => setResModal(false)}>
-          <div className="sh" onClick={e => e.stopPropagation()}>
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:100, display:"flex", alignItems:"flex-end", justifyContent:"center" }} onClick={() => setResModal(false)}>
+          <div style={{ background:"#fff", borderRadius:"24px 24px 0 0", padding:24, width:"100%", maxWidth:430, maxHeight:"85vh", overflowY:"auto", fontFamily:"Outfit,sans-serif" }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize:18, fontWeight:800, color:"#0f172a", marginBottom:16 }}>🏠 Nueva residencia</div>
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              <div>
-                <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>NOMBRE *</label>
-                <input value={newRes.nombre} onChange={e => setNewRes(p => ({ ...p, nombre:e.target.value }))} placeholder="Casa de verano, Local..." style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14 }} />
+              <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>NOMBRE *</label>
+                <input value={newRes.nombre} onChange={e => setNewRes(p => ({ ...p, nombre:e.target.value }))} placeholder="Casa de verano, Local..." style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
               </div>
-              <div>
-                <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>DIRECCION *</label>
-                <input value={newRes.direccion} onChange={e => setNewRes(p => ({ ...p, direccion:e.target.value }))} placeholder="Calle, Colonia, Ciudad" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14 }} />
+              <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>DIRECCION *</label>
+                <input value={newRes.direccion} onChange={e => setNewRes(p => ({ ...p, direccion:e.target.value }))} placeholder="Calle, Colonia, Ciudad" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
               </div>
-              <div>
-                <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>DESCRIPCION DEL EQUIPO</label>
-                <input value={newRes.equipos} onChange={e => setNewRes(p => ({ ...p, equipos:e.target.value }))} placeholder="Ej: Minisplit 1.5 ton" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14 }} />
+              <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>DESCRIPCION DEL EQUIPO</label>
+                <input value={newRes.equipos} onChange={e => setNewRes(p => ({ ...p, equipos:e.target.value }))} placeholder="Ej: Minisplit 1.5 ton" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-                <div>
-                  <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>MARCA</label>
-                  <input value={newRes.marca||""} onChange={e => setNewRes(p => ({ ...p, marca:e.target.value }))} placeholder="LG, Carrier..." style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14 }} />
+                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>MARCA</label>
+                  <input value={newRes.marca||""} onChange={e => setNewRes(p => ({ ...p, marca:e.target.value }))} placeholder="LG, Carrier..." style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
                 </div>
-                <div>
-                  <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>MODELO</label>
-                  <input value={newRes.modelo||""} onChange={e => setNewRes(p => ({ ...p, modelo:e.target.value }))} placeholder="LV181HV4" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14 }} />
+                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>MODELO</label>
+                  <input value={newRes.modelo||""} onChange={e => setNewRes(p => ({ ...p, modelo:e.target.value }))} placeholder="LV181HV4" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
                 </div>
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-                <div>
-                  <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>NO. DE SERIE</label>
-                  <input value={newRes.serie||""} onChange={e => setNewRes(p => ({ ...p, serie:e.target.value }))} placeholder="SN-123456" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14 }} />
+                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>NO. DE SERIE</label>
+                  <input value={newRes.serie||""} onChange={e => setNewRes(p => ({ ...p, serie:e.target.value }))} placeholder="SN-123456" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
                 </div>
-                <div>
-                  <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>FECHA INSTALACION</label>
-                  <input type="date" value={newRes.fecha_instalacion||""} onChange={e => setNewRes(p => ({ ...p, fecha_instalacion:e.target.value }))} style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14 }} />
+                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>FECHA INSTALACION</label>
+                  <input type="date" value={newRes.fecha_instalacion||""} onChange={e => setNewRes(p => ({ ...p, fecha_instalacion:e.target.value }))} style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
                 </div>
               </div>
-              <button className="pb" onClick={() => getGPS("res")} style={{ background: newRes.lat ? "#dcfce7" : "#1d6fa4", color: newRes.lat ? "#15803d" : "#fff", padding:"12px", fontSize:14, borderRadius:12 }}>
+              <button onClick={() => getGPS("res")} style={{ background:newRes.lat?"#dcfce7":"#1d6fa4", color:newRes.lat?"#15803d":"#fff", padding:"12px", fontSize:14, borderRadius:12, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>
                 {gpsLoad ? "Obteniendo..." : newRes.lat ? "✅ GPS guardado" : "📍 Guardar ubicacion GPS"}
               </button>
               <div style={{ display:"flex", gap:10, marginTop:4 }}>
-                <button className="pb" onClick={() => setResModal(false)} style={{ flex:1, background:"#f1f5f9", color:"#64748b", padding:"13px" }}>Cancelar</button>
-                <button className="pb" onClick={addResidencia} style={{ flex:2, background:"linear-gradient(135deg,#10b981,#059669)", color:"#fff", padding:"13px" }}>Guardar</button>
+                <button onClick={() => setResModal(false)} style={{ flex:1, background:"#f1f5f9", color:"#64748b", padding:"13px", borderRadius:14, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>Cancelar</button>
+                <button onClick={addResidencia} style={{ flex:2, background:"linear-gradient(135deg,#10b981,#059669)", color:"#fff", padding:"13px", borderRadius:14, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>Guardar</button>
               </div>
             </div>
           </div>
