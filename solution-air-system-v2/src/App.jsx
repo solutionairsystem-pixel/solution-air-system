@@ -26,6 +26,11 @@ const db = {
   updateCita: (id, d) => db.patch("citas", id, d),
 
   getHistorial: (cid) => db.get("historial", `cliente_id=eq.${cid}&order=fecha.desc`),
+
+  getCRMUsuarios: () => db.get("crm_usuarios", "select=*&activo=eq.true"),
+  getCRMUsuarioByEmail: (email) => db.get("crm_usuarios", `email=eq.${encodeURIComponent(email)}`),
+  createCRMUsuario: (d) => db.post("crm_usuarios", d),
+  updateCRMUsuario: (id, d) => db.patch("crm_usuarios", id, d),
 };
 
 // ── HELPERS ───────────────────────────────────────────────
@@ -207,6 +212,7 @@ function UsuariosCRM({ showToast }) {
 //  CRM
 // ═══════════════════════════════════════════════════════════
 function CRM() {
+  const [usuario, setUsuario] = useState(null);
   const [tab, setTab] = useState("citas");
   const [clientes, setClientes] = useState([]);
   const [citas, setCitas] = useState([]);
@@ -215,6 +221,8 @@ function CRM() {
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  if (!usuario) return <CRMLogin onLogin={(u) => setUsuario(u)} />;
 
   const load = async () => {
     setLoading(true);
