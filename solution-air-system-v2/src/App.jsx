@@ -598,18 +598,29 @@ function Portal() {
   const login = async () => {
     if (!lf.email || !lf.pass) return;
     setLoading(true);
-    const res = await db.getClienteByEmail(lf.email);
-    setLoading(false);
-    if (res && res.length > 0) {
-      const cl = res[0];
-      if (cl.password_hash === lf.pass) {
-        setCliente(cl); setScreen("app"); setLf({ email:"", pass:"", err:"" });
-        loadData(cl);
+    try {
+      const res = await db.getClienteByEmail(lf.email);
+      if (res && res.length > 0) {
+        const cl = res[0];
+        if (cl.password_hash === lf.pass) {
+          const [cts, hist] = await Promise.all([db.getCitasByCliente(cl.id), db.getHistorial(cl.id)]);
+          setCitas(Array.isArray(cts) ? cts : []);
+          setHistorial(Array.isArray(hist) ? hist : []);
+          setCliente(cl);
+          setLoading(false);
+          setLf({ email:"", pass:"", err:"" });
+          setScreen("app");
+        } else {
+          setLf(p => ({ ...p, err:"Contrasena incorrecta." }));
+          setLoading(false);
+        }
       } else {
-        setLf(p => ({ ...p, err:"Contrasena incorrecta." }));
+        setLf(p => ({ ...p, err:"Email no encontrado. Registrate primero." }));
+        setLoading(false);
       }
-    } else {
-      setLf(p => ({ ...p, err:"Email no encontrado. Registrate primero." }));
+    } catch(e) {
+      setLf(p => ({ ...p, err:"Error de conexion. Intenta de nuevo." }));
+      setLoading(false);
     }
   };
 
@@ -617,19 +628,26 @@ function Portal() {
     if (!rf.nombre || !rf.email || !rf.pass || !rf.tel) { setRf(p => ({ ...p, err:"Completa todos los campos." })); return; }
     if (rf.pass !== rf.pass2) { setRf(p => ({ ...p, err:"Las contrasenas no coinciden." })); return; }
     setLoading(true);
-    const exist = await db.getClienteByEmail(rf.email);
-    if (exist && exist.length > 0) { setRf(p => ({ ...p, err:"Este email ya esta registrado." })); setLoading(false); return; }
-    const avatar = rf.nombre.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
-    const res = await db.createCliente({ nombre:rf.nombre, email:rf.email, password_hash:rf.pass, telefono:rf.tel, avatar });
-    const cl = Array.isArray(res) ? res[0] : res;
-    if (cl?.id) {
-      await db.createResidencia({ cliente_id:cl.id, nombre:"Mi residencia", direccion:rf.direccion || "Por definir", lat:rf.lat, lng:rf.lng, equipos:"" });
+    try {
+      const exist = await db.getClienteByEmail(rf.email);
+      if (exist && exist.length > 0) { setRf(p => ({ ...p, err:"Este email ya esta registrado." })); setLoading(false); return; }
+      const avatar = rf.nombre.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+      const res = await db.createCliente({ nombre:rf.nombre, email:rf.email, password_hash:rf.pass, telefono:rf.tel, avatar });
+      const cl = Array.isArray(res) ? res[0] : res;
+      if (!cl?.id) { setRf(p => ({ ...p, err:"Error al crear cuenta. Intenta de nuevo." })); setLoading(false); return; }
+      await db.createResidencia({ cliente_id:cl.id, nombre:"Mi residencia", direccion:rf.direccion || "Por definir", lat:rf.lat||null, lng:rf.lng||null, equipos:"" });
       const clFull = await db.getClienteByEmail(rf.email);
-      setCliente(clFull[0]);
-      loadData(clFull[0]);
+      const clienteFinal = Array.isArray(clFull) && clFull.length > 0 ? clFull[0] : cl;
+      const [cts, hist] = await Promise.all([db.getCitasByCliente(clienteFinal.id), db.getHistorial(clienteFinal.id)]);
+      setCitas(Array.isArray(cts) ? cts : []);
+      setHistorial(Array.isArray(hist) ? hist : []);
+      setCliente(clienteFinal);
+      setLoading(false);
+      setScreen("app");
+    } catch(e) {
+      setRf(p => ({ ...p, err:"Error de conexion. Intenta de nuevo." }));
+      setLoading(false);
     }
-    setLoading(false);
-    setScreen("app");
   };
 
   const getGPS = (target) => {
