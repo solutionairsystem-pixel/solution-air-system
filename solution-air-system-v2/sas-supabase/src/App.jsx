@@ -139,7 +139,7 @@ function OfertasCRM({ showToast }) {
           <h1 style={{ fontSize:22, fontWeight:800, color:"#0f172a" }}>🎁 Gestión de Ofertas</h1>
           <p style={{ color:"#64748b", fontSize:13, marginTop:3 }}>Las ofertas activas se muestran a los clientes en el portal</p>
         </div>
-        <button className="cb" onClick={() => { setForm({ color:"#0ea5e9", icon:"🎁", activa:true }); setEditing(null); setModal(true); }} style={{ background:"linear-gradient(135deg,#1d6fa4,#0284c7)", color:"#fff", padding:"10px 18px" }}>+ Nueva oferta</button>
+        <button onClick={() => { setForm({ color:"#0ea5e9", icon:"🎁", activa:true }); setEditing(null); setModal(true); }} style={{ background:"linear-gradient(135deg,#1d6fa4,#0284c7)", color:"#fff", padding:"10px 18px", border:"none", borderRadius:9, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontSize:14, fontWeight:600 }}>+ Nueva oferta</button>
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:16 }}>
         {ofertas.map(o => (
@@ -155,11 +155,11 @@ function OfertasCRM({ showToast }) {
             <div style={{ padding:"12px 16px" }}>
               <div style={{ fontSize:12, color:"#94a3b8", marginBottom:10 }}>🕐 {o.vig}</div>
               <div style={{ display:"flex", gap:8 }}>
-                <button className="cb" onClick={() => toggleActiva(o.id)} style={{ flex:1, background: o.activa ? "#fef9c3" : "#f0fdf4", color: o.activa ? "#a16207" : "#15803d", border:`1px solid ${o.activa?"#fde68a":"#bbf7d0"}`, padding:"7px", fontSize:12 }}>
+                <button onClick={() => toggleActiva(o.id)} style={{ flex:1, background: o.activa ? "#fef9c3" : "#f0fdf4", color: o.activa ? "#a16207" : "#15803d", border:`1px solid ${o.activa?"#fde68a":"#bbf7d0"}`, padding:"7px", fontSize:12, borderRadius:9, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>
                   {o.activa ? "⏸ Desactivar" : "▶ Activar"}
                 </button>
-                <button className="cb" onClick={() => { setForm({...o}); setEditing(o.id); setModal(true); }} style={{ background:"#eff6ff", color:"#1d6fa4", padding:"7px 12px", fontSize:12 }}>✏️</button>
-                <button className="cb" onClick={() => eliminar(o.id)} style={{ background:"#fef2f2", color:"#dc2626", padding:"7px 12px", fontSize:12 }}>🗑</button>
+                <button onClick={() => { setForm({...o}); setEditing(o.id); setModal(true); }} style={{ background:"#eff6ff", color:"#1d6fa4", padding:"7px 12px", fontSize:12, border:"none", borderRadius:9, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>✏️</button>
+                <button onClick={() => eliminar(o.id)} style={{ background:"#fef2f2", color:"#dc2626", padding:"7px 12px", fontSize:12, border:"none", borderRadius:9, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>🗑</button>
               </div>
             </div>
           </div>
@@ -167,19 +167,19 @@ function OfertasCRM({ showToast }) {
       </div>
 
       {modal && (
-        <div className="ov" onClick={() => { setModal(false); setForm({}); setEditing(null); }}>
-          <div className="mo" onClick={e => e.stopPropagation()}>
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:100, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }} onClick={() => { setModal(false); setForm({}); setEditing(null); }}>
+          <div style={{ background:"#fff", borderRadius:18, padding:26, width:520, maxWidth:"100%", maxHeight:"90vh", overflowY:"auto", boxShadow:"0 8px 32px rgba(0,0,0,.12)" }} onClick={e => e.stopPropagation()}>
             <div style={{ fontWeight:800, fontSize:18, marginBottom:16, color:"#0f172a" }}>{editing ? "✏️ Editar oferta" : "🎁 Nueva oferta"}</div>
             <div style={{ display:"flex", flexDirection:"column", gap:13 }}>
-              <div className="fl"><label>Título *</label><input value={form.titulo||""} onChange={e=>setForm(p=>({...p,titulo:e.target.value}))} placeholder="Ej: Mantenimiento de Verano"/></div>
-              <div className="fl"><label>Descripción *</label><textarea rows={2} value={form.desc||""} onChange={e=>setForm(p=>({...p,desc:e.target.value}))} placeholder="Describe la oferta..." style={{resize:"none"}}/></div>
-              <div className="g2">
-                <div className="fl"><label>Badge (ej: 20% OFF)</label><input value={form.badge||""} onChange={e=>setForm(p=>({...p,badge:e.target.value}))} placeholder="20% OFF"/></div>
-                <div className="fl"><label>Vigencia</label><input value={form.vig||""} onChange={e=>setForm(p=>({...p,vig:e.target.value}))} placeholder="Hasta 30 Jun 2025"/></div>
+              <div style={{ display:"flex", flexDirection:"column", gap:4 }}><label style={{ fontSize:12, color:"#64748b", fontWeight:500 }}>Título *</label><input style={{ background:"#f8fafc", border:"1px solid #e2e8f0", color:"#1e293b", padding:"10px 14px", borderRadius:8, fontFamily:"Outfit,sans-serif", fontSize:14, width:"100%", outline:"none", boxSizing:"border-box" }} value={form.titulo||""} onChange={e=>setForm(p=>({...p,titulo:e.target.value}))} placeholder="Ej: Mantenimiento de Verano"/></div>
+              <div style={{ display:"flex", flexDirection:"column", gap:4 }}><label style={{ fontSize:12, color:"#64748b", fontWeight:500 }}>Descripción *</label><textarea rows={2} style={{ background:"#f8fafc", border:"1px solid #e2e8f0", color:"#1e293b", padding:"10px 14px", borderRadius:8, fontFamily:"Outfit,sans-serif", fontSize:14, width:"100%", outline:"none", boxSizing:"border-box", resize:"none" }} value={form.desc||""} onChange={e=>setForm(p=>({...p,desc:e.target.value}))} placeholder="Describe la oferta..." style={{resize:"none"}}/></div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                <div style={{ display:"flex", flexDirection:"column", gap:4 }}><label style={{ fontSize:12, color:"#64748b", fontWeight:500 }}>Badge (ej: 20% OFF)</label><input style={{ background:"#f8fafc", border:"1px solid #e2e8f0", color:"#1e293b", padding:"10px 14px", borderRadius:8, fontFamily:"Outfit,sans-serif", fontSize:14, width:"100%", outline:"none", boxSizing:"border-box" }} value={form.badge||""} onChange={e=>setForm(p=>({...p,badge:e.target.value}))} placeholder="20% OFF"/></div>
+                <div style={{ display:"flex", flexDirection:"column", gap:4 }}><label style={{ fontSize:12, color:"#64748b", fontWeight:500 }}>Vigencia</label><input style={{ background:"#f8fafc", border:"1px solid #e2e8f0", color:"#1e293b", padding:"10px 14px", borderRadius:8, fontFamily:"Outfit,sans-serif", fontSize:14, width:"100%", outline:"none", boxSizing:"border-box" }} value={form.vig||""} onChange={e=>setForm(p=>({...p,vig:e.target.value}))} placeholder="Hasta 30 Jun 2025"/></div>
               </div>
-              <div className="g2">
-                <div className="fl"><label>Ícono</label><input value={form.icon||""} onChange={e=>setForm(p=>({...p,icon:e.target.value}))} placeholder="🎁"/></div>
-                <div className="fl"><label>Color</label>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                <div style={{ display:"flex", flexDirection:"column", gap:4 }}><label style={{ fontSize:12, color:"#64748b", fontWeight:500 }}>Ícono</label><input style={{ background:"#f8fafc", border:"1px solid #e2e8f0", color:"#1e293b", padding:"10px 14px", borderRadius:8, fontFamily:"Outfit,sans-serif", fontSize:14, width:"100%", outline:"none", boxSizing:"border-box" }} value={form.icon||""} onChange={e=>setForm(p=>({...p,icon:e.target.value}))} placeholder="🎁"/></div>
+                <div style={{ display:"flex", flexDirection:"column", gap:4 }}><label style={{ fontSize:12, color:"#64748b", fontWeight:500 }}>Color</label>
                   <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginTop:4 }}>
                     {COLORES.map(c => <div key={c} onClick={()=>setForm(p=>({...p,color:c}))} style={{ width:28, height:28, borderRadius:"50%", background:c, cursor:"pointer", border:`3px solid ${form.color===c?"#0f172a":"transparent"}` }}/>)}
                   </div>
@@ -187,8 +187,8 @@ function OfertasCRM({ showToast }) {
               </div>
             </div>
             <div style={{ display:"flex", gap:10, marginTop:20 }}>
-              <button className="cb" onClick={()=>{setModal(false);setForm({});setEditing(null);}} style={{ flex:1, background:"#f1f5f9", color:"#64748b", padding:"12px" }}>Cancelar</button>
-              <button className="cb" onClick={guardar} style={{ flex:2, background:"linear-gradient(135deg,#1d6fa4,#0284c7)", color:"#fff", padding:"12px" }}>Guardar</button>
+              <button onClick={()=>{setModal(false);setForm({});setEditing(null);}} style={{ flex:1, background:"#f1f5f9", color:"#64748b", padding:"12px", border:"none", borderRadius:9, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>Cancelar</button>
+              <button onClick={guardar} style={{ flex:2, background:"linear-gradient(135deg,#1d6fa4,#0284c7)", color:"#fff", padding:"12px", border:"none", borderRadius:9, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>Guardar</button>
             </div>
           </div>
         </div>
@@ -859,15 +859,17 @@ function Portal() {
   const editResidencia = async () => {
     if (!editResData?.id) return;
     try {
+      const eqs = Array.isArray(editResData.equipos_arr) ? editResData.equipos_arr.filter(e=>e.desc||e.marca||e.modelo||e.serie) : [];
+      const primerEq = eqs[0] || {};
       await db.updateResidencia(editResData.id, {
         nombre: editResData.nombre,
         tipo: editResData.tipo || "residencial",
         direccion: editResData.direccion,
-        equipos: editResData.equipos || "",
-        marca: editResData.marca || "",
-        modelo: editResData.modelo || "",
-        serie: editResData.serie || "",
-        fecha_instalacion: editResData.fecha_instalacion || null,
+        equipos: eqs.length > 0 ? JSON.stringify(eqs) : (editResData.equipos||""),
+        marca: primerEq.marca || editResData.marca || "",
+        modelo: primerEq.modelo || editResData.modelo || "",
+        serie: primerEq.serie || editResData.serie || "",
+        fecha_instalacion: primerEq.fecha || editResData.fecha_instalacion || null,
         lat: editResData.lat || null,
         lng: editResData.lng || null,
       });
@@ -1053,7 +1055,14 @@ function Portal() {
                       </div>
                     )}
                     {r.lat && r.lng && <div style={{ fontSize:12, color:"#10b981", marginTop:6 }}>✅ GPS guardado</div>}
-                    <button onClick={() => { setEditResData({...r}); setEditResModal(true); }} style={{ marginTop:10, width:"100%", padding:"9px", borderRadius:10, border:"1px solid #bfdbfe", background:"#eff6ff", color:"#1d6fa4", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontSize:13, fontWeight:600 }}>✏️ Editar residencia</button>
+                    <button onClick={() => { 
+                      const parsed = parseEquipos(r.equipos);
+                      const arr = parsed.length > 0 ? parsed : 
+                        (r.marca ? [{desc:r.equipos||"",marca:r.marca||"",modelo:r.modelo||"",serie:r.serie||"",fecha:r.fecha_instalacion||""}] : 
+                        [{desc:"",marca:"",modelo:"",serie:"",fecha:""}]);
+                      setEditResData({...r, equipos_arr: arr}); 
+                      setEditResModal(true); 
+                    }} style={{ marginTop:10, width:"100%", padding:"9px", borderRadius:10, border:"1px solid #bfdbfe", background:"#eff6ff", color:"#1d6fa4", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontSize:13, fontWeight:600 }}>✏️ Editar residencia</button>
                   </div>
                 );
               })}
@@ -1277,24 +1286,33 @@ function Portal() {
               <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>DIRECCION</label>
                 <input value={editResData.direccion||""} onChange={e => setEditResData(p => ({ ...p, direccion:e.target.value }))} style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
               </div>
-              <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>DESCRIPCION DEL EQUIPO</label>
-                <input value={editResData.equipos||""} onChange={e => setEditResData(p => ({ ...p, equipos:e.target.value }))} placeholder="Ej: Minisplit 1.5 ton" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-              </div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>MARCA</label>
-                  <input value={editResData.marca||""} onChange={e => setEditResData(p => ({ ...p, marca:e.target.value }))} placeholder="LG, Carrier..." style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+              <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:12, padding:"12px 14px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#a16207" }}>❄️ Equipos de AC</div>
+                  <button onClick={() => setEditResData(p => ({ ...p, equipos_arr:[...(p.equipos_arr||[]), {desc:"",marca:"",modelo:"",serie:"",fecha:""}] }))}
+                    style={{ fontSize:12, color:"#1d6fa4", background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:8, padding:"4px 10px", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>
+                    + Agregar equipo
+                  </button>
                 </div>
-                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>MODELO</label>
-                  <input value={editResData.modelo||""} onChange={e => setEditResData(p => ({ ...p, modelo:e.target.value }))} placeholder="LV181HV4" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                </div>
-              </div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>NO. DE SERIE</label>
-                  <input value={editResData.serie||""} onChange={e => setEditResData(p => ({ ...p, serie:e.target.value }))} placeholder="SN-123456" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                </div>
-                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>FECHA INSTALACION</label>
-                  <input type="date" value={editResData.fecha_instalacion||""} onChange={e => setEditResData(p => ({ ...p, fecha_instalacion:e.target.value }))} max={new Date().toISOString().split("T")[0]} style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                </div>
+                {(editResData.equipos_arr||[{desc:"",marca:"",modelo:"",serie:"",fecha:""}]).map((eq, idx) => (
+                  <div key={idx} style={{ background:"#fff", border:"1px solid #fde68a", borderRadius:10, padding:"10px 12px", marginBottom:8 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                      <div style={{ fontSize:12, fontWeight:700, color:"#a16207" }}>Equipo {idx+1}</div>
+                      {(editResData.equipos_arr||[]).length > 1 && <button onClick={() => setEditResData(p => ({ ...p, equipos_arr:p.equipos_arr.filter((_,i)=>i!==idx) }))} style={{ fontSize:11, color:"#ef4444", background:"#fef2f2", border:"none", borderRadius:6, padding:"2px 8px", cursor:"pointer", fontFamily:"Outfit,sans-serif" }}>✕ Quitar</button>}
+                    </div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                      <input value={eq.desc||""} onChange={e => { const a=[...(editResData.equipos_arr||[])]; a[idx]={...a[idx],desc:e.target.value}; setEditResData(p=>({...p,equipos_arr:a})); }} placeholder="Descripción" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                        <input value={eq.marca||""} onChange={e => { const a=[...(editResData.equipos_arr||[])]; a[idx]={...a[idx],marca:e.target.value}; setEditResData(p=>({...p,equipos_arr:a})); }} placeholder="Marca" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                        <input value={eq.modelo||""} onChange={e => { const a=[...(editResData.equipos_arr||[])]; a[idx]={...a[idx],modelo:e.target.value}; setEditResData(p=>({...p,equipos_arr:a})); }} placeholder="Modelo" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                      </div>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                        <input value={eq.serie||""} onChange={e => { const a=[...(editResData.equipos_arr||[])]; a[idx]={...a[idx],serie:e.target.value}; setEditResData(p=>({...p,equipos_arr:a})); }} placeholder="No. Serie" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                        <input type="date" value={eq.fecha||""} onChange={e => { const a=[...(editResData.equipos_arr||[])]; a[idx]={...a[idx],fecha:e.target.value}; setEditResData(p=>({...p,equipos_arr:a})); }} max={new Date().toISOString().split("T")[0]} style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
               <button onClick={() => getGPS("edit")} style={{ background:editResData.lat?"#dcfce7":"#1d6fa4", color:editResData.lat?"#15803d":"#fff", padding:"12px", fontSize:14, borderRadius:12, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>
                 {gpsLoad ? "Obteniendo..." : editResData.lat ? "✅ GPS guardado" : "📍 Actualizar ubicacion GPS"}
