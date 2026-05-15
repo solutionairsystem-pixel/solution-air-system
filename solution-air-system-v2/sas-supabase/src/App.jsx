@@ -597,6 +597,8 @@ function Portal() {
   const [exito, setExito] = useState(false);
   const [detalle, setDetalle] = useState(null);
   const [resModal, setResModal] = useState(false);
+  const [editResModal, setEditResModal] = useState(false);
+  const [editResData, setEditResData] = useState(null);
   const [newRes, setNewRes] = useState({ nombre:"", direccion:"", equipos:"", marca:"", modelo:"", serie:"", fecha_instalacion:"", lat:null, lng:null });
   const [gpsLoad, setGpsLoad] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -671,6 +673,7 @@ function Portal() {
         const { latitude:lat, longitude:lng } = pos.coords;
         if (target === "reg") setRf(p => ({ ...p, lat, lng }));
         if (target === "res") setNewRes(p => ({ ...p, lat, lng }));
+        if (target === "edit") setEditResData(p => ({ ...p, lat, lng }));
         setGpsLoad(false);
       },
       () => { setGpsLoad(false); alert("Activa el GPS e intenta de nuevo."); }
@@ -693,6 +696,30 @@ function Portal() {
       setResModal(false);
     } catch(e) {
       alert("Error al guardar. Intenta de nuevo.");
+    }
+  };
+
+  const editResidencia = async () => {
+    if (!editResData?.id) return;
+    try {
+      await db.updateResidencia(editResData.id, {
+        nombre: editResData.nombre,
+        direccion: editResData.direccion,
+        equipos: editResData.equipos || "",
+        marca: editResData.marca || "",
+        modelo: editResData.modelo || "",
+        serie: editResData.serie || "",
+        fecha_instalacion: editResData.fecha_instalacion || null,
+        lat: editResData.lat || null,
+        lng: editResData.lng || null,
+      });
+      const clFull = await db.getClienteByEmail(cliente.email);
+      const clActual = Array.isArray(clFull) && clFull.length > 0 ? clFull[0] : cliente;
+      setCliente(clActual);
+      setEditResModal(false);
+      setEditResData(null);
+    } catch(e) {
+      alert("Error al actualizar. Intenta de nuevo.");
     }
   };
 
@@ -847,6 +874,7 @@ function Portal() {
                       </div>
                     )}
                     {r.lat && r.lng && <div style={{ fontSize:12, color:"#10b981", marginTop:6 }}>✅ GPS guardado</div>}
+                    <button onClick={() => { setEditResData({...r}); setEditResModal(true); }} style={{ marginTop:10, width:"100%", padding:"9px", borderRadius:10, border:"1px solid #bfdbfe", background:"#eff6ff", color:"#1d6fa4", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontSize:13, fontWeight:600 }}>✏️ Editar residencia</button>
                   </div>
                 );
               })}
@@ -1047,6 +1075,48 @@ function Portal() {
           ))}
         </nav>
       </div>
+
+      {editResModal && editResData && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:100, display:"flex", alignItems:"flex-end", justifyContent:"center" }} onClick={() => setEditResModal(false)}>
+          <div style={{ background:"#fff", borderRadius:"24px 24px 0 0", padding:24, width:"100%", maxWidth:430, maxHeight:"85vh", overflowY:"auto", fontFamily:"Outfit,sans-serif" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontSize:18, fontWeight:800, color:"#0f172a", marginBottom:16 }}>✏️ Editar residencia</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>NOMBRE</label>
+                <input value={editResData.nombre||""} onChange={e => setEditResData(p => ({ ...p, nombre:e.target.value }))} style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+              </div>
+              <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>DIRECCION</label>
+                <input value={editResData.direccion||""} onChange={e => setEditResData(p => ({ ...p, direccion:e.target.value }))} style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+              </div>
+              <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>DESCRIPCION DEL EQUIPO</label>
+                <input value={editResData.equipos||""} onChange={e => setEditResData(p => ({ ...p, equipos:e.target.value }))} placeholder="Ej: Minisplit 1.5 ton" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>MARCA</label>
+                  <input value={editResData.marca||""} onChange={e => setEditResData(p => ({ ...p, marca:e.target.value }))} placeholder="LG, Carrier..." style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                </div>
+                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>MODELO</label>
+                  <input value={editResData.modelo||""} onChange={e => setEditResData(p => ({ ...p, modelo:e.target.value }))} placeholder="LV181HV4" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                </div>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>NO. DE SERIE</label>
+                  <input value={editResData.serie||""} onChange={e => setEditResData(p => ({ ...p, serie:e.target.value }))} placeholder="SN-123456" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                </div>
+                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>FECHA INSTALACION</label>
+                  <input type="date" value={editResData.fecha_instalacion||""} onChange={e => setEditResData(p => ({ ...p, fecha_instalacion:e.target.value }))} style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                </div>
+              </div>
+              <button onClick={() => getGPS("edit")} style={{ background:editResData.lat?"#dcfce7":"#1d6fa4", color:editResData.lat?"#15803d":"#fff", padding:"12px", fontSize:14, borderRadius:12, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>
+                {gpsLoad ? "Obteniendo..." : editResData.lat ? "✅ GPS guardado" : "📍 Actualizar ubicacion GPS"}
+              </button>
+              <div style={{ display:"flex", gap:10, marginTop:4 }}>
+                <button onClick={() => { setEditResModal(false); setEditResData(null); }} style={{ flex:1, background:"#f1f5f9", color:"#64748b", padding:"13px", borderRadius:14, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>Cancelar</button>
+                <button onClick={editResidencia} style={{ flex:2, background:"linear-gradient(135deg,#1d6fa4,#0284c7)", color:"#fff", padding:"13px", borderRadius:14, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>Guardar cambios</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {resModal && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:100, display:"flex", alignItems:"flex-end", justifyContent:"center" }} onClick={() => setResModal(false)}>
