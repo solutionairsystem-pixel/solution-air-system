@@ -39,6 +39,20 @@ const fmt = (iso) => { if(!iso) return "—"; const [,m,d] = iso.split("-"); ret
 const today = () => new Date().toISOString().split("T")[0];
 const HORAS = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00"];
 const TIPOS = ["Mantenimiento preventivo","Revision general","Limpieza de filtros","Recarga de gas","Reparacion","Instalacion nueva"];
+
+const nextMant = (fechaInstalacion) => {
+  if (!fechaInstalacion) return null;
+  const d = new Date(fechaInstalacion + "T00:00:00");
+  const now = new Date();
+  while (d <= now) d.setMonth(d.getMonth() + 6);
+  return d.toISOString().split("T")[0];
+};
+
+const diasParaMant = (fechaInstalacion) => {
+  const next = nextMant(fechaInstalacion);
+  if (!next) return null;
+  return Math.ceil((new Date(next + "T00:00:00") - new Date()) / 86400000);
+};
 const OFERTAS = [
   { id:"o1", titulo:"Mantenimiento de Verano", badge:"20% OFF", desc:"Limpieza profunda + revision de gas.", vig:"Valido hasta 30 Jun 2025", grad:"linear-gradient(135deg,#f97316,#ea580c)", icon:"☀️" },
   { id:"o2", titulo:"Plan Anual 3x2", badge:"3 x 2", desc:"Contrata 3 mantenimientos y el tercero es gratis.", vig:"Oferta permanente", grad:"linear-gradient(135deg,#0ea5e9,#0284c7)", icon:"📋" },
