@@ -854,6 +854,169 @@ function LoginScreen({ lf, setLf, loading, onSubmit, onRegister }) {
   );
 }
 
+
+// ── RES MODAL (stable - outside Portal) ──────────────────
+function ResModal({ show, onClose, newRes, setNewRes, onSave, gpsLoad, getGPS }) {
+  if (!show) return null;
+  const inp = (val, onChange, placeholder, type="text") => (
+    <input type={type} value={val||""} onChange={onChange} placeholder={placeholder}
+      max={type==="date" ? new Date().toISOString().split("T")[0] : undefined}
+      style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10,
+        background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif",
+        outline:"none", boxSizing:"border-box" }} />
+  );
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:200, display:"flex", alignItems:"flex-end", justifyContent:"center" }} onClick={onClose}>
+      <div style={{ background:"#fff", borderRadius:"24px 24px 0 0", padding:24, width:"100%", maxWidth:430, maxHeight:"88vh", overflowY:"auto", fontFamily:"Outfit,sans-serif" }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize:18, fontWeight:800, color:"#0f172a", marginBottom:16 }}>🏠 Nueva residencia</div>
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          {/* TIPO */}
+          <div>
+            <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:8 }}>TIPO DE PROPIEDAD *</label>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+              {[{val:"residencial",icon:"🏠",label:"Residencial"},{val:"comercial",icon:"🏢",label:"Comercial"}].map(t => (
+                <button key={t.val} onClick={() => setNewRes(p => ({ ...p, tipo:t.val }))}
+                  style={{ padding:"12px 8px", borderRadius:12, border:`2px solid ${(newRes.tipo||"residencial")===t.val?"#1d6fa4":"#e2e8f0"}`, background:(newRes.tipo||"residencial")===t.val?"#eff6ff":"#fff", color:(newRes.tipo||"residencial")===t.val?"#1d6fa4":"#64748b", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600, fontSize:14, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+                  <span style={{ fontSize:22 }}>{t.icon}</span>{t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* NOMBRE */}
+          <div>
+            <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>NOMBRE *</label>
+            {inp(newRes.nombre, e => setNewRes(p=>({...p,nombre:e.target.value})), (newRes.tipo||"residencial")==="comercial"?"Oficina, Local...":"Casa principal...")}
+          </div>
+          {/* DIRECCION */}
+          <div>
+            <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>DIRECCION *</label>
+            {inp(newRes.direccion, e => setNewRes(p=>({...p,direccion:e.target.value})), "Calle, Sector, Ciudad")}
+          </div>
+          {/* EQUIPOS */}
+          <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:12, padding:"12px 14px" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:"#a16207" }}>❄️ Equipos de AC</div>
+              <button onClick={() => setNewRes(p => ({ ...p, equipos:[...(p.equipos||[]), {desc:"",marca:"",modelo:"",serie:"",fecha:""}] }))}
+                style={{ fontSize:12, color:"#1d6fa4", background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:8, padding:"4px 10px", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>
+                + Agregar equipo
+              </button>
+            </div>
+            {(newRes.equipos||[{desc:"",marca:"",modelo:"",serie:"",fecha:""}]).map((eq, eqIdx) => (
+              <div key={eqIdx} style={{ background:"#fff", border:"1px solid #fde68a", borderRadius:10, padding:"10px 12px", marginBottom:8 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+                  <span style={{ fontSize:12, fontWeight:700, color:"#a16207" }}>Equipo {eqIdx+1}</span>
+                  {(newRes.equipos||[]).length > 1 && <button onClick={() => setNewRes(p=>({...p,equipos:p.equipos.filter((_,i)=>i!==eqIdx)}))} style={{ fontSize:11, color:"#ef4444", background:"#fef2f2", border:"none", borderRadius:6, padding:"2px 8px", cursor:"pointer" }}>✕</button>}
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {inp(eq.desc, e=>{const a=[...(newRes.equipos||[])];a[eqIdx]={...a[eqIdx],desc:e.target.value};setNewRes(p=>({...p,equipos:a}));}, "Descripción (Minisplit 1.5 ton sala)")}
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                    {inp(eq.marca, e=>{const a=[...(newRes.equipos||[])];a[eqIdx]={...a[eqIdx],marca:e.target.value};setNewRes(p=>({...p,equipos:a}));}, "Marca (LG, Carrier...)")}
+                    {inp(eq.modelo, e=>{const a=[...(newRes.equipos||[])];a[eqIdx]={...a[eqIdx],modelo:e.target.value};setNewRes(p=>({...p,equipos:a}));}, "Modelo")}
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                    {inp(eq.serie, e=>{const a=[...(newRes.equipos||[])];a[eqIdx]={...a[eqIdx],serie:e.target.value};setNewRes(p=>({...p,equipos:a}));}, "No. de Serie")}
+                    {inp(eq.fecha, e=>{const a=[...(newRes.equipos||[])];a[eqIdx]={...a[eqIdx],fecha:e.target.value};setNewRes(p=>({...p,equipos:a}));}, "Fecha instalacion", "date")}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* GPS */}
+          <button onClick={() => getGPS("res")} style={{ background:newRes.lat?"#dcfce7":"#1d6fa4", color:newRes.lat?"#15803d":"#fff", padding:"12px", fontSize:14, borderRadius:12, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>
+            {gpsLoad ? "Obteniendo GPS..." : newRes.lat ? "✅ Ubicacion guardada" : "📍 Guardar ubicacion GPS"}
+          </button>
+          {/* BUTTONS */}
+          <div style={{ display:"flex", gap:10, marginTop:4 }}>
+            <button onClick={onClose} style={{ flex:1, background:"#f1f5f9", color:"#64748b", padding:"13px", borderRadius:14, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>Cancelar</button>
+            <button onClick={onSave} style={{ flex:2, background:"linear-gradient(135deg,#10b981,#059669)", color:"#fff", padding:"13px", borderRadius:14, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>Guardar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── EDIT RES MODAL (stable - outside Portal) ─────────────
+function EditResModal({ show, data, setData, onClose, onSave, gpsLoad, getGPS }) {
+  if (!show || !data) return null;
+  const inp = (val, onChange, placeholder, type="text") => (
+    <input type={type} value={val||""} onChange={onChange} placeholder={placeholder}
+      max={type==="date" ? new Date().toISOString().split("T")[0] : undefined}
+      style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10,
+        background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif",
+        outline:"none", boxSizing:"border-box" }} />
+  );
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:200, display:"flex", alignItems:"flex-end", justifyContent:"center" }} onClick={onClose}>
+      <div style={{ background:"#fff", borderRadius:"24px 24px 0 0", padding:24, width:"100%", maxWidth:430, maxHeight:"88vh", overflowY:"auto", fontFamily:"Outfit,sans-serif" }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize:18, fontWeight:800, color:"#0f172a", marginBottom:16 }}>✏️ Editar residencia</div>
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          {/* TIPO */}
+          <div>
+            <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:8 }}>TIPO DE PROPIEDAD</label>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+              {[{val:"residencial",icon:"🏠",label:"Residencial"},{val:"comercial",icon:"🏢",label:"Comercial"}].map(t => (
+                <button key={t.val} onClick={() => setData(p => ({ ...p, tipo:t.val }))}
+                  style={{ padding:"12px 8px", borderRadius:12, border:`2px solid ${(data.tipo||"residencial")===t.val?"#1d6fa4":"#e2e8f0"}`, background:(data.tipo||"residencial")===t.val?"#eff6ff":"#fff", color:(data.tipo||"residencial")===t.val?"#1d6fa4":"#64748b", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600, fontSize:14, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+                  <span style={{ fontSize:22 }}>{t.icon}</span>{t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {/* NOMBRE */}
+          <div>
+            <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>NOMBRE</label>
+            {inp(data.nombre, e => setData(p=>({...p,nombre:e.target.value})), "Nombre de residencia")}
+          </div>
+          {/* DIRECCION */}
+          <div>
+            <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>DIRECCION</label>
+            {inp(data.direccion, e => setData(p=>({...p,direccion:e.target.value})), "Calle, Sector, Ciudad")}
+          </div>
+          {/* EQUIPOS */}
+          <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:12, padding:"12px 14px" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:"#a16207" }}>❄️ Equipos de AC</div>
+              <button onClick={() => setData(p => ({ ...p, equipos_arr:[...(p.equipos_arr||[]), {desc:"",marca:"",modelo:"",serie:"",fecha:""}] }))}
+                style={{ fontSize:12, color:"#1d6fa4", background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:8, padding:"4px 10px", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>
+                + Agregar equipo
+              </button>
+            </div>
+            {(data.equipos_arr||[{desc:"",marca:"",modelo:"",serie:"",fecha:""}]).map((eq, eqIdx) => (
+              <div key={eqIdx} style={{ background:"#fff", border:"1px solid #fde68a", borderRadius:10, padding:"10px 12px", marginBottom:8 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+                  <span style={{ fontSize:12, fontWeight:700, color:"#a16207" }}>Equipo {eqIdx+1}</span>
+                  {(data.equipos_arr||[]).length > 1 && <button onClick={() => setData(p=>({...p,equipos_arr:p.equipos_arr.filter((_,i)=>i!==eqIdx)}))} style={{ fontSize:11, color:"#ef4444", background:"#fef2f2", border:"none", borderRadius:6, padding:"2px 8px", cursor:"pointer" }}>✕</button>}
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {inp(eq.desc, e=>{const a=[...(data.equipos_arr||[])];a[eqIdx]={...a[eqIdx],desc:e.target.value};setData(p=>({...p,equipos_arr:a}));}, "Descripción")}
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                    {inp(eq.marca, e=>{const a=[...(data.equipos_arr||[])];a[eqIdx]={...a[eqIdx],marca:e.target.value};setData(p=>({...p,equipos_arr:a}));}, "Marca")}
+                    {inp(eq.modelo, e=>{const a=[...(data.equipos_arr||[])];a[eqIdx]={...a[eqIdx],modelo:e.target.value};setData(p=>({...p,equipos_arr:a}));}, "Modelo")}
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                    {inp(eq.serie, e=>{const a=[...(data.equipos_arr||[])];a[eqIdx]={...a[eqIdx],serie:e.target.value};setData(p=>({...p,equipos_arr:a}));}, "No. Serie")}
+                    {inp(eq.fecha, e=>{const a=[...(data.equipos_arr||[])];a[eqIdx]={...a[eqIdx],fecha:e.target.value};setData(p=>({...p,equipos_arr:a}));}, "Fecha instalacion", "date")}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* GPS */}
+          <button onClick={() => getGPS("edit")} style={{ background:data.lat?"#dcfce7":"#1d6fa4", color:data.lat?"#15803d":"#fff", padding:"12px", fontSize:14, borderRadius:12, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>
+            {gpsLoad ? "Obteniendo..." : data.lat ? "✅ GPS guardado" : "📍 Actualizar GPS"}
+          </button>
+          {/* BUTTONS */}
+          <div style={{ display:"flex", gap:10, marginTop:4 }}>
+            <button onClick={onClose} style={{ flex:1, background:"#f1f5f9", color:"#64748b", padding:"13px", borderRadius:14, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>Cancelar</button>
+            <button onClick={onSave} style={{ flex:2, background:"linear-gradient(135deg,#1d6fa4,#0284c7)", color:"#fff", padding:"13px", borderRadius:14, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>Guardar cambios</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── PHONE SHELL ───────────────────────────────────────────
 const PORTAL_CSS = `@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');*{box-sizing:border-box;margin:0;padding:0}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}input,select,textarea{font-family:Outfit,sans-serif;font-size:15px;outline:none;transition:all .2s}.pb{cursor:pointer;border:none;font-family:Outfit,sans-serif;font-weight:600;transition:all .2s;border-radius:14px}.pb:active{transform:scale(.97)}.pc{background:#fff;border-radius:20px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06)}.tbar{display:flex;background:#fff;border-top:1px solid #e2e8f0;position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:50}.tbtn{flex:1;padding:11px 4px 9px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;border:none;background:transparent;font-family:Outfit,sans-serif;font-size:11px;font-weight:500;color:#94a3b8;transition:color .2s}.tbtn.on{color:#1d6fa4}.sl{animation:su .3s ease both}@keyframes su{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}.fade{animation:fi .3s ease both}@keyframes fi{from{opacity:0}to{opacity:1}}.dot{width:8px;height:8px;border-radius:50%;background:#e2e8f0;transition:background .3s}.dot.on{background:#1d6fa4}input[type=date]::-webkit-calendar-picker-indicator{opacity:.5;cursor:pointer}.ov2{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:flex-end;justify-content:center}.sh{background:#fff;border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:430px;max-height:85vh;overflow-y:auto}`;
 
@@ -1402,129 +1565,12 @@ function Portal() {
         </nav>
       </div>
 
-      {editResModal && editResData && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:100, display:"flex", alignItems:"flex-end", justifyContent:"center" }} onClick={() => setEditResModal(false)}>
-          <div style={{ background:"#fff", borderRadius:"24px 24px 0 0", padding:24, width:"100%", maxWidth:430, maxHeight:"85vh", overflowY:"auto", fontFamily:"Outfit,sans-serif" }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize:18, fontWeight:800, color:"#0f172a", marginBottom:16 }}>✏️ Editar residencia</div>
-            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              <div>
-                <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:8 }}>TIPO DE PROPIEDAD</label>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-                  {[{val:"residencial",icon:"🏠",label:"Residencial"},{val:"comercial",icon:"🏢",label:"Comercial"}].map(t => (
-                    <button key={t.val} onClick={() => setEditResData(p => ({ ...p, tipo:t.val }))}
-                      style={{ padding:"12px 8px", borderRadius:12, border:`2px solid ${(editResData.tipo||"residencial")===t.val?"#1d6fa4":"#e2e8f0"}`, background:(editResData.tipo||"residencial")===t.val?"#eff6ff":"#fff", color:(editResData.tipo||"residencial")===t.val?"#1d6fa4":"#64748b", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600, fontSize:14, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-                      <span style={{ fontSize:24 }}>{t.icon}</span>{t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>NOMBRE</label>
-                <input value={editResData.nombre||""} onChange={e => setEditResData(p => ({ ...p, nombre:e.target.value }))} style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-              </div>
-              <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>DIRECCION</label>
-                <input value={editResData.direccion||""} onChange={e => setEditResData(p => ({ ...p, direccion:e.target.value }))} style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-              </div>
-              <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:12, padding:"12px 14px" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#a16207" }}>❄️ Equipos de AC</div>
-                  <button onClick={() => setEditResData(p => ({ ...p, equipos_arr:[...(p.equipos_arr||[]), {desc:"",marca:"",modelo:"",serie:"",fecha:""}] }))}
-                    style={{ fontSize:12, color:"#1d6fa4", background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:8, padding:"4px 10px", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>
-                    + Agregar equipo
-                  </button>
-                </div>
-                {(editResData.equipos_arr||[{desc:"",marca:"",modelo:"",serie:"",fecha:""}]).map((eq, eqIdx) => (
-                  <div key={eqIdx} style={{ background:"#fff", border:"1px solid #fde68a", borderRadius:10, padding:"10px 12px", marginBottom:8 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-                      <div style={{ fontSize:12, fontWeight:700, color:"#a16207" }}>Equipo {eqIdx+1}</div>
-                      {(editResData.equipos_arr||[]).length > 1 && <button onClick={() => setEditResData(p => ({ ...p, equipos_arr:p.equipos_arr.filter((_,i)=>i!==eqIdx) }))} style={{ fontSize:11, color:"#ef4444", background:"#fef2f2", border:"none", borderRadius:6, padding:"2px 8px", cursor:"pointer", fontFamily:"Outfit,sans-serif" }}>✕ Quitar</button>}
-                    </div>
-                    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                      <input value={eq.desc||""} onChange={e => { const a=[...(editResData.equipos_arr||[])]; a[eqIdx]={...a[idx],desc:e.target.value}; setEditResData(p=>({...p,equipos_arr:a})); }} placeholder="Descripción" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-                        <input value={eq.marca||""} onChange={e => { const a=[...(editResData.equipos_arr||[])]; a[eqIdx]={...a[idx],marca:e.target.value}; setEditResData(p=>({...p,equipos_arr:a})); }} placeholder="Marca" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                        <input value={eq.modelo||""} onChange={e => { const a=[...(editResData.equipos_arr||[])]; a[eqIdx]={...a[idx],modelo:e.target.value}; setEditResData(p=>({...p,equipos_arr:a})); }} placeholder="Modelo" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                      </div>
-                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-                        <input value={eq.serie||""} onChange={e => { const a=[...(editResData.equipos_arr||[])]; a[eqIdx]={...a[idx],serie:e.target.value}; setEditResData(p=>({...p,equipos_arr:a})); }} placeholder="No. Serie" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                        <input type="date" value={eq.fecha||""} onChange={e => { const a=[...(editResData.equipos_arr||[])]; a[eqIdx]={...a[idx],fecha:e.target.value}; setEditResData(p=>({...p,equipos_arr:a})); }} max={new Date().toISOString().split("T")[0]} style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button onClick={() => getGPS("edit")} style={{ background:editResData.lat?"#dcfce7":"#1d6fa4", color:editResData.lat?"#15803d":"#fff", padding:"12px", fontSize:14, borderRadius:12, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>
-                {gpsLoad ? "Obteniendo..." : editResData.lat ? "✅ GPS guardado" : "📍 Actualizar ubicacion GPS"}
-              </button>
-              <div style={{ display:"flex", gap:10, marginTop:4 }}>
-                <button onClick={() => { setEditResModal(false); setEditResData(null); }} style={{ flex:1, background:"#f1f5f9", color:"#64748b", padding:"13px", borderRadius:14, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>Cancelar</button>
-                <button onClick={editResidencia} style={{ flex:2, background:"linear-gradient(135deg,#1d6fa4,#0284c7)", color:"#fff", padding:"13px", borderRadius:14, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>Guardar cambios</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {resModal && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:100, display:"flex", alignItems:"flex-end", justifyContent:"center" }} onClick={() => setResModal(false)}>
-          <div style={{ background:"#fff", borderRadius:"24px 24px 0 0", padding:24, width:"100%", maxWidth:430, maxHeight:"85vh", overflowY:"auto", fontFamily:"Outfit,sans-serif" }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize:18, fontWeight:800, color:"#0f172a", marginBottom:16 }}>🏠 Nueva residencia</div>
-            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              <div>
-                <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:8 }}>TIPO DE PROPIEDAD *</label>
-                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:4 }}>
-                  {[{val:"residencial",icon:"🏠",label:"Residencial"},{val:"comercial",icon:"🏢",label:"Comercial"}].map(t => (
-                    <button key={t.val} onClick={() => setNewRes(p => ({ ...p, tipo:t.val }))}
-                      style={{ padding:"12px 8px", borderRadius:12, border:`2px solid ${newRes.tipo===t.val?"#1d6fa4":"#e2e8f0"}`, background:newRes.tipo===t.val?"#eff6ff":"#fff", color:newRes.tipo===t.val?"#1d6fa4":"#64748b", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600, fontSize:14, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-                      <span style={{ fontSize:24 }}>{t.icon}</span>{t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>NOMBRE *</label>
-                <input value={newRes.nombre} onChange={e => setNewRes(p => ({ ...p, nombre:e.target.value }))} placeholder={newRes.tipo==="comercial"?"Oficina, Local, Almacén...":"Casa principal, Apartamento..."} style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-              </div>
-              <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>DIRECCION *</label>
-                <input value={newRes.direccion} onChange={e => setNewRes(p => ({ ...p, direccion:e.target.value }))} placeholder="Calle, Colonia, Ciudad" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-              </div>
-              <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:12, padding:"12px 14px" }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:"#a16207" }}>❄️ Equipos de AC</div>
-                  <button onClick={() => setNewRes(p => ({ ...p, equipos:[...p.equipos, {desc:"",marca:"",modelo:"",serie:"",fecha:""}] }))}
-                    style={{ fontSize:12, color:"#1d6fa4", background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:8, padding:"4px 10px", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>
-                    + Agregar equipo
-                  </button>
-                </div>
-                {newRes.equipos.map((eq, eqIdx) => (
-                  <div key={eqIdx} style={{ background:"#fff", border:"1px solid #fde68a", borderRadius:10, padding:"10px 12px", marginBottom:8 }}>
-                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-                      <div style={{ fontSize:12, fontWeight:700, color:"#a16207" }}>Equipo {eqIdx+1}</div>
-                      {newRes.equipos.length > 1 && <button onClick={() => setNewRes(p => ({ ...p, equipos:p.equipos.filter((_,i)=>i!==eqIdx) }))} style={{ fontSize:11, color:"#ef4444", background:"#fef2f2", border:"none", borderRadius:6, padding:"2px 8px", cursor:"pointer", fontFamily:"Outfit,sans-serif" }}>✕ Quitar</button>}
-                    </div>
-                    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                      <input value={eq.desc} onChange={e => { const eq2=[...newRes.equipos]; eq2[eqIdx]={...eq2[idx],desc:e.target.value}; setNewRes(p=>({...p,equipos:eq2})); }} placeholder="Descripción (ej: Minisplit 1.5 ton sala)" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-                        <input value={eq.marca} onChange={e => { const eq2=[...newRes.equipos]; eq2[eqIdx]={...eq2[idx],marca:e.target.value}; setNewRes(p=>({...p,equipos:eq2})); }} placeholder="Marca (LG, Carrier...)" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                        <input value={eq.modelo} onChange={e => { const eq2=[...newRes.equipos]; eq2[eqIdx]={...eq2[idx],modelo:e.target.value}; setNewRes(p=>({...p,equipos:eq2})); }} placeholder="Modelo" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                      </div>
-                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-                        <input value={eq.serie} onChange={e => { const eq2=[...newRes.equipos]; eq2[eqIdx]={...eq2[idx],serie:e.target.value}; setNewRes(p=>({...p,equipos:eq2})); }} placeholder="No. Serie" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                        <input type="date" value={eq.fecha} onChange={e => { const eq2=[...newRes.equipos]; eq2[eqIdx]={...eq2[idx],fecha:e.target.value}; setNewRes(p=>({...p,equipos:eq2})); }} max={new Date().toISOString().split("T")[0]} style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <button onClick={() => getGPS("res")} style={{ background:newRes.lat?"#dcfce7":"#1d6fa4", color:newRes.lat?"#15803d":"#fff", padding:"12px", fontSize:14, borderRadius:12, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>
-                {gpsLoad ? "Obteniendo..." : newRes.lat ? "✅ GPS guardado" : "📍 Guardar ubicacion GPS"}
-              </button>
-              <div style={{ display:"flex", gap:10, marginTop:4 }}>
-                <button onClick={() => setResModal(false)} style={{ flex:1, background:"#f1f5f9", color:"#64748b", padding:"13px", borderRadius:14, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>Cancelar</button>
-                <button onClick={addResidencia} style={{ flex:2, background:"linear-gradient(135deg,#10b981,#059669)", color:"#fff", padding:"13px", borderRadius:14, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>Guardar</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </PhoneShell>
-  );
-}
+      <EditResModal
+        show={editResModal}
+        data={editResData}
+        setData={setEditResData}
+        onClose={() => { setEditResModal(false); setEditResData(null); }}
+        onSave={editResidencia}
+        gpsLoad={gpsLoad}
+        getGPS={getGPS}
+      />
