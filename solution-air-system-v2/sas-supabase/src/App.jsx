@@ -28,7 +28,7 @@ const db = {
   getHistorial: (cid) => db.get("historial", `cliente_id=eq.${cid}&order=fecha.desc`),
 
   getCRMUsuarios: () => db.get("crm_usuarios", "select=*&activo=eq.true"),
-  getCRMUsuarioByEmail: (email) => db.get("crm_usuarios", `email=eq.${encodeURIComponent(email)}`),
+  getCRMUsuarioByEmail: (email) => db.get("crm_usuarios", `email=eq.${encodeURIComponent(email)}&select=*`),
   createCRMUsuario: (d) => db.post("crm_usuarios", d),
   updateCRMUsuario: (id, d) => db.patch("crm_usuarios", id, d),
 };
@@ -407,7 +407,7 @@ function CRM() {
                     {(cl.residencias || []).map(r => (
                       <div key={r.id} style={{ background:"#f8fafc", border:"1px solid #e2e8f0", borderRadius:10, padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                         <div>
-                          <div style={{ fontWeight:600, fontSize:14 }}>🏠 {r.nombre}</div>
+                          <div style={{ fontWeight:600, fontSize:14 }}>{r.tipo==="comercial"?"🏢":"🏠"} {r.nombre} <span style={{ fontSize:11, color:"#94a3b8", textTransform:"capitalize" }}>({r.tipo||"residencial"})</span></div>
                           <div style={{ fontSize:13, color:"#64748b", marginTop:2 }}>📍 {r.direccion}</div>
                           {r.equipos && <div style={{ fontSize:12, color:"#94a3b8", marginTop:1 }}>❄️ {r.equipos}</div>}
                         </div>
@@ -599,7 +599,7 @@ function Portal() {
   const [resModal, setResModal] = useState(false);
   const [editResModal, setEditResModal] = useState(false);
   const [editResData, setEditResData] = useState(null);
-  const [newRes, setNewRes] = useState({ nombre:"", direccion:"", equipos:"", marca:"", modelo:"", serie:"", fecha_instalacion:"", lat:null, lng:null });
+  const [newRes, setNewRes] = useState({ nombre:"", tipo:"residencial", direccion:"", equipos:"", marca:"", modelo:"", serie:"", fecha_instalacion:"", lat:null, lng:null });
   const [gpsLoad, setGpsLoad] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -684,7 +684,7 @@ function Portal() {
     if (!newRes.nombre || !newRes.direccion) return;
     try {
       await db.createResidencia({
-        cliente_id:cliente.id, nombre:newRes.nombre, direccion:newRes.direccion,
+        cliente_id:cliente.id, nombre:newRes.nombre, tipo:newRes.tipo||"residencial", direccion:newRes.direccion,
         lat:newRes.lat||null, lng:newRes.lng||null, equipos:newRes.equipos||"",
         marca:newRes.marca||"", modelo:newRes.modelo||"", serie:newRes.serie||"",
         fecha_instalacion:newRes.fecha_instalacion||null
@@ -692,7 +692,7 @@ function Portal() {
       const clFull = await db.getClienteByEmail(cliente.email);
       const clActual = Array.isArray(clFull) && clFull.length > 0 ? clFull[0] : cliente;
       setCliente(clActual);
-      setNewRes({ nombre:"", direccion:"", equipos:"", marca:"", modelo:"", serie:"", fecha_instalacion:"", lat:null, lng:null });
+      setNewRes({ nombre:"", tipo:"residencial", direccion:"", equipos:"", marca:"", modelo:"", serie:"", fecha_instalacion:"", lat:null, lng:null });
       setResModal(false);
     } catch(e) {
       alert("Error al guardar. Intenta de nuevo.");
@@ -704,6 +704,7 @@ function Portal() {
     try {
       await db.updateResidencia(editResData.id, {
         nombre: editResData.nombre,
+        tipo: editResData.tipo || "residencial",
         direccion: editResData.direccion,
         equipos: editResData.equipos || "",
         marca: editResData.marca || "",
@@ -849,7 +850,7 @@ function Portal() {
                 return (
                   <div key={r.id} className="pc">
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
-                      <div style={{ fontSize:16, fontWeight:700, color:"#0f172a" }}>🏠 {r.nombre}</div>
+                      <div style={{ fontSize:16, fontWeight:700, color:"#0f172a" }}>{r.tipo==="comercial"?"🏢":"🏠"} {r.nombre}</div>
                       {r.lat && r.lng && <a href={`https://maps.google.com/?q=${r.lat},${r.lng}`} target="_blank" rel="noreferrer" style={{ background:"#dcfce7", color:"#15803d", padding:"6px 12px", borderRadius:8, fontSize:12, fontWeight:600, textDecoration:"none" }}>🗺 Maps</a>}
                     </div>
                     <div style={{ fontSize:14, color:"#475569", marginBottom:6 }}>📍 {r.direccion}</div>
@@ -1081,6 +1082,17 @@ function Portal() {
           <div style={{ background:"#fff", borderRadius:"24px 24px 0 0", padding:24, width:"100%", maxWidth:430, maxHeight:"85vh", overflowY:"auto", fontFamily:"Outfit,sans-serif" }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize:18, fontWeight:800, color:"#0f172a", marginBottom:16 }}>✏️ Editar residencia</div>
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              <div>
+                <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:8 }}>TIPO DE PROPIEDAD</label>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                  {[{val:"residencial",icon:"🏠",label:"Residencial"},{val:"comercial",icon:"🏢",label:"Comercial"}].map(t => (
+                    <button key={t.val} onClick={() => setEditResData(p => ({ ...p, tipo:t.val }))}
+                      style={{ padding:"12px 8px", borderRadius:12, border:`2px solid ${(editResData.tipo||"residencial")===t.val?"#1d6fa4":"#e2e8f0"}`, background:(editResData.tipo||"residencial")===t.val?"#eff6ff":"#fff", color:(editResData.tipo||"residencial")===t.val?"#1d6fa4":"#64748b", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600, fontSize:14, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+                      <span style={{ fontSize:24 }}>{t.icon}</span>{t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>NOMBRE</label>
                 <input value={editResData.nombre||""} onChange={e => setEditResData(p => ({ ...p, nombre:e.target.value }))} style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
               </div>
@@ -1103,7 +1115,7 @@ function Portal() {
                   <input value={editResData.serie||""} onChange={e => setEditResData(p => ({ ...p, serie:e.target.value }))} placeholder="SN-123456" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
                 </div>
                 <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>FECHA INSTALACION</label>
-                  <input type="date" value={editResData.fecha_instalacion||""} onChange={e => setEditResData(p => ({ ...p, fecha_instalacion:e.target.value }))} style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                  <input type="date" value={editResData.fecha_instalacion||""} onChange={e => setEditResData(p => ({ ...p, fecha_instalacion:e.target.value }))} max={new Date().toISOString().split("T")[0]} style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
                 </div>
               </div>
               <button onClick={() => getGPS("edit")} style={{ background:editResData.lat?"#dcfce7":"#1d6fa4", color:editResData.lat?"#15803d":"#fff", padding:"12px", fontSize:14, borderRadius:12, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>
@@ -1123,29 +1135,48 @@ function Portal() {
           <div style={{ background:"#fff", borderRadius:"24px 24px 0 0", padding:24, width:"100%", maxWidth:430, maxHeight:"85vh", overflowY:"auto", fontFamily:"Outfit,sans-serif" }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize:18, fontWeight:800, color:"#0f172a", marginBottom:16 }}>🏠 Nueva residencia</div>
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              <div>
+                <label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:8 }}>TIPO DE PROPIEDAD *</label>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:4 }}>
+                  {[{val:"residencial",icon:"🏠",label:"Residencial"},{val:"comercial",icon:"🏢",label:"Comercial"}].map(t => (
+                    <button key={t.val} onClick={() => setNewRes(p => ({ ...p, tipo:t.val }))}
+                      style={{ padding:"12px 8px", borderRadius:12, border:`2px solid ${newRes.tipo===t.val?"#1d6fa4":"#e2e8f0"}`, background:newRes.tipo===t.val?"#eff6ff":"#fff", color:newRes.tipo===t.val?"#1d6fa4":"#64748b", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600, fontSize:14, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+                      <span style={{ fontSize:24 }}>{t.icon}</span>{t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>NOMBRE *</label>
-                <input value={newRes.nombre} onChange={e => setNewRes(p => ({ ...p, nombre:e.target.value }))} placeholder="Casa de verano, Local..." style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                <input value={newRes.nombre} onChange={e => setNewRes(p => ({ ...p, nombre:e.target.value }))} placeholder={newRes.tipo==="comercial"?"Oficina, Local, Almacén...":"Casa principal, Apartamento..."} style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
               </div>
               <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>DIRECCION *</label>
                 <input value={newRes.direccion} onChange={e => setNewRes(p => ({ ...p, direccion:e.target.value }))} placeholder="Calle, Colonia, Ciudad" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
               </div>
-              <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>DESCRIPCION DEL EQUIPO</label>
-                <input value={newRes.equipos} onChange={e => setNewRes(p => ({ ...p, equipos:e.target.value }))} placeholder="Ej: Minisplit 1.5 ton" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-              </div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>MARCA</label>
-                  <input value={newRes.marca||""} onChange={e => setNewRes(p => ({ ...p, marca:e.target.value }))} placeholder="LG, Carrier..." style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                </div>
-                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>MODELO</label>
-                  <input value={newRes.modelo||""} onChange={e => setNewRes(p => ({ ...p, modelo:e.target.value }))} placeholder="LV181HV4" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                </div>
-              </div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>NO. DE SERIE</label>
-                  <input value={newRes.serie||""} onChange={e => setNewRes(p => ({ ...p, serie:e.target.value }))} placeholder="SN-123456" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                </div>
-                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>FECHA INSTALACION</label>
-                  <input type="date" value={newRes.fecha_instalacion||""} onChange={e => setNewRes(p => ({ ...p, fecha_instalacion:e.target.value }))} style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+              <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:12, padding:"12px 14px" }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#a16207", marginBottom:10 }}>❄️ Equipo de AC</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>DESCRIPCION</label>
+                    <input value={newRes.equipos} onChange={e => setNewRes(p => ({ ...p, equipos:e.target.value }))} placeholder="Ej: Minisplit 1.5 ton" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#fff", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                    <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>MARCA</label>
+                      <input value={newRes.marca||""} onChange={e => setNewRes(p => ({ ...p, marca:e.target.value }))} placeholder="LG, Carrier..." style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#fff", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                    </div>
+                    <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>MODELO</label>
+                      <input value={newRes.modelo||""} onChange={e => setNewRes(p => ({ ...p, modelo:e.target.value }))} placeholder="LV181HV4" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#fff", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                    </div>
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                    <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>NO. DE SERIE</label>
+                      <input value={newRes.serie||""} onChange={e => setNewRes(p => ({ ...p, serie:e.target.value }))} placeholder="SN-123456" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#fff", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                    </div>
+                    <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>FECHA INSTALACION</label>
+                      <input type="date" value={newRes.fecha_instalacion||""} onChange={e => setNewRes(p => ({ ...p, fecha_instalacion:e.target.value }))} max={new Date().toISOString().split("T")[0]} style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#fff", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                    </div>
+                  </div>
+                  <div style={{ fontSize:12, color:"#64748b", background:"#f8fafc", borderRadius:8, padding:"8px 10px" }}>
+                    💡 Si tienes más de un equipo en esta residencia, agrégalos en la descripción. Ej: "Minisplit 1 ton sala + Minisplit 2 ton cuarto"
+                  </div>
                 </div>
               </div>
               <button onClick={() => getGPS("res")} style={{ background:newRes.lat?"#dcfce7":"#1d6fa4", color:newRes.lat?"#15803d":"#fff", padding:"12px", fontSize:14, borderRadius:12, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>
