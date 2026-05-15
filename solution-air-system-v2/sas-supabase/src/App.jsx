@@ -594,6 +594,11 @@ function CRM() {
                               </div>
                             ) : null;
                           })()}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setModal("editResidenciaCRM"); setForm({...r, equiposArr: parseEquipos(r.equipos).length > 0 ? parseEquipos(r.equipos) : (r.marca ? [{desc:r.equipos||"",marca:r.marca||"",modelo:r.modelo||"",serie:r.serie||"",fecha:r.fecha_instalacion||""}] : [{desc:"",marca:"",modelo:"",serie:"",fecha:""}]), clienteEmail: cl.email}); }}
+                            style={{ marginTop:10, width:"100%", padding:"8px", borderRadius:9, border:"1px solid #bfdbfe", background:"#eff6ff", color:"#1d6fa4", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontSize:13, fontWeight:600 }}>
+                            ✏️ Editar equipo
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -615,6 +620,54 @@ function CRM() {
           </div>
         )}
       </div>
+
+      {/* MODAL EDITAR RESIDENCIA CRM */}
+      {modal === "editResidenciaCRM" && form.id && (
+        <div className="ov" onClick={() => { setModal(null); setForm({}); }}>
+          <div className="mo" onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight:800, fontSize:18, marginBottom:4, color:"#0f172a" }}>✏️ Editar equipo</div>
+            <div style={{ fontSize:13, color:"#64748b", marginBottom:14 }}>🏠 {form.nombre} — {form.tipo||"residencial"}</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:13 }}>
+              <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:12, padding:"12px 14px" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#a16207" }}>❄️ Equipos</div>
+                  <button className="cb" onClick={()=>setForm(p=>({...p,equiposArr:[...(p.equiposArr||[]),{desc:"",marca:"",modelo:"",serie:"",fecha:""}]}))} style={{ fontSize:12, color:"#1d6fa4", background:"#eff6ff", border:"1px solid #bfdbfe", padding:"4px 10px" }}>+ Equipo</button>
+                </div>
+                {(form.equiposArr||[{desc:"",marca:"",modelo:"",serie:"",fecha:""}]).map((eq,eqIdx)=>(
+                  <div key={eqIdx} style={{ background:"#fff", border:"1px solid #fde68a", borderRadius:10, padding:"10px 12px", marginBottom:8 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+                      <span style={{ fontSize:12, fontWeight:700, color:"#a16207" }}>Unidad {eqIdx+1}</span>
+                      {(form.equiposArr||[]).length>1 && <button className="cb" onClick={()=>setForm(p=>({...p,equiposArr:p.equiposArr.filter((_,i)=>i!==eqIdx)}))} style={{ fontSize:11, color:"#ef4444", background:"#fef2f2", padding:"2px 8px" }}>✕</button>}
+                    </div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+                      <input value={eq.desc||""} onChange={e=>{const a=[...(form.equiposArr||[])];a[eqIdx]={...a[eqIdx],desc:e.target.value};setForm(p=>({...p,equiposArr:a}));}} placeholder="Descripción" style={{ width:"100%", padding:"9px 12px", border:"1px solid #e2e8f0", borderRadius:9, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }}/>
+                      <div className="g2">
+                        <input value={eq.marca||""} onChange={e=>{const a=[...(form.equiposArr||[])];a[eqIdx]={...a[eqIdx],marca:e.target.value};setForm(p=>({...p,equiposArr:a}));}} placeholder="Marca" style={{ width:"100%", padding:"9px 12px", border:"1px solid #e2e8f0", borderRadius:9, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }}/>
+                        <input value={eq.modelo||""} onChange={e=>{const a=[...(form.equiposArr||[])];a[eqIdx]={...a[eqIdx],modelo:e.target.value};setForm(p=>({...p,equiposArr:a}));}} placeholder="Modelo" style={{ width:"100%", padding:"9px 12px", border:"1px solid #e2e8f0", borderRadius:9, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }}/>
+                      </div>
+                      <div className="g2">
+                        <input value={eq.serie||""} onChange={e=>{const a=[...(form.equiposArr||[])];a[eqIdx]={...a[eqIdx],serie:e.target.value};setForm(p=>({...p,equiposArr:a}));}} placeholder="No. Serie" style={{ width:"100%", padding:"9px 12px", border:"1px solid #e2e8f0", borderRadius:9, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }}/>
+                        <input type="date" value={eq.fecha||""} onChange={e=>{const a=[...(form.equiposArr||[])];a[eqIdx]={...a[eqIdx],fecha:e.target.value};setForm(p=>({...p,equiposArr:a}));}} max={new Date().toISOString().split("T")[0]} style={{ width:"100%", padding:"9px 12px", border:"1px solid #e2e8f0", borderRadius:9, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }}/>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:10, marginTop:18 }}>
+              <button className="cb" onClick={()=>{setModal(null);setForm({});}} style={{ flex:1, background:"#f1f5f9", color:"#64748b", padding:"12px" }}>Cancelar</button>
+              <button className="cb" onClick={async()=>{
+                const eqs=(form.equiposArr||[]).filter(e=>e.desc||e.marca||e.modelo||e.serie||e.fecha);
+                const p=eqs[0]||{};
+                await db.updateResidencia(form.id,{equipos:eqs.length>0?JSON.stringify(eqs):"",marca:p.marca||"",modelo:p.modelo||"",serie:p.serie||"",fecha_instalacion:p.fecha||null});
+                showToast("Equipo actualizado ✅");
+                setModal(null);setForm({});
+                load();
+              }} style={{ flex:2, background:"linear-gradient(135deg,#10b981,#059669)", color:"#fff", padding:"12px" }}>Guardar cambios</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL GESTION */}
       {modal === "gestion" && (
@@ -1296,11 +1349,12 @@ function Portal() {
               <div style={{ fontSize:13, color:"rgba(255,255,255,.8)", marginTop:3 }}>Solo para clientes Solution Air System</div>
             </div>
             <div style={{ padding:"16px 14px", display:"flex", flexDirection:"column", gap:14 }}>
-              {OFERTAS.map(o => (
+              {getOfertas().length === 0 && <div style={{ textAlign:"center", padding:32, color:"#94a3b8" }}>No hay ofertas activas por el momento.</div>}
+              {getOfertas().map(o => (
                 <div key={o.id} style={{ borderRadius:20, overflow:"hidden", boxShadow:"0 4px 16px rgba(0,0,0,.1)" }}>
-                  <div style={{ background:o.grad, padding:"18px 18px 14px" }}>
+                  <div style={{ background:`linear-gradient(135deg,${o.color||"#1d6fa4"},${o.color||"#0284c7"}cc)`, padding:"18px 18px 14px" }}>
                     <div style={{ display:"flex", justifyContent:"space-between" }}>
-                      <div style={{ fontSize:30 }}>{o.icon}</div>
+                      <div style={{ fontSize:30 }}>{o.icon||"🎁"}</div>
                       <div style={{ background:"rgba(255,255,255,.25)", color:"#fff", padding:"5px 13px", borderRadius:20, fontSize:14, fontWeight:800 }}>{o.badge}</div>
                     </div>
                     <div style={{ fontSize:17, fontWeight:800, color:"#fff", marginTop:9 }}>{o.titulo}</div>
