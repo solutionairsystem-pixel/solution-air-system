@@ -35,7 +35,7 @@ const db = {
 
 // ── HELPERS ───────────────────────────────────────────────
 const MESES = ["","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-const fmt = (iso) => { if(!iso) return "—"; const [,m,d] = iso.split("-"); return `${d} ${MESES[+m]}`; };
+const fmt = (iso) => { if(!iso) return "—"; const [y,m,d] = iso.split("-"); return `${d} ${MESES[+m]} ${y}`; };
 const today = () => new Date().toISOString().split("T")[0];
 const HORAS = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00"];
 const TIPOS = ["Mantenimiento preventivo","Revision general","Limpieza de filtros","Recarga de gas","Reparacion","Instalacion nueva"];
@@ -1355,21 +1355,21 @@ function Portal() {
                     + Agregar equipo
                   </button>
                 </div>
-                {(editResData.equipos_arr||[{desc:"",marca:"",modelo:"",serie:"",fecha:""}]).map((eq, idx) => (
-                  <div key={idx} style={{ background:"#fff", border:"1px solid #fde68a", borderRadius:10, padding:"10px 12px", marginBottom:8 }}>
+                {(editResData.equipos_arr||[{desc:"",marca:"",modelo:"",serie:"",fecha:""}]).map((eq, eqIdx) => (
+                  <div key={eqIdx} style={{ background:"#fff", border:"1px solid #fde68a", borderRadius:10, padding:"10px 12px", marginBottom:8 }}>
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-                      <div style={{ fontSize:12, fontWeight:700, color:"#a16207" }}>Equipo {idx+1}</div>
-                      {(editResData.equipos_arr||[]).length > 1 && <button onClick={() => setEditResData(p => ({ ...p, equipos_arr:p.equipos_arr.filter((_,i)=>i!==idx) }))} style={{ fontSize:11, color:"#ef4444", background:"#fef2f2", border:"none", borderRadius:6, padding:"2px 8px", cursor:"pointer", fontFamily:"Outfit,sans-serif" }}>✕ Quitar</button>}
+                      <div style={{ fontSize:12, fontWeight:700, color:"#a16207" }}>Equipo {eqIdx+1}</div>
+                      {(editResData.equipos_arr||[]).length > 1 && <button onClick={() => setEditResData(p => ({ ...p, equipos_arr:p.equipos_arr.filter((_,i)=>i!==eqIdx) }))} style={{ fontSize:11, color:"#ef4444", background:"#fef2f2", border:"none", borderRadius:6, padding:"2px 8px", cursor:"pointer", fontFamily:"Outfit,sans-serif" }}>✕ Quitar</button>}
                     </div>
                     <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                      <input value={eq.desc||""} onChange={e => { const a=[...(editResData.equipos_arr||[])]; a[idx]={...a[idx],desc:e.target.value}; setEditResData(p=>({...p,equipos_arr:a})); }} placeholder="Descripción" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                      <input value={eq.desc||""} onChange={e => { const a=[...(editResData.equipos_arr||[])]; a[eqIdx]={...a[idx],desc:e.target.value}; setEditResData(p=>({...p,equipos_arr:a})); }} placeholder="Descripción" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
                       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-                        <input value={eq.marca||""} onChange={e => { const a=[...(editResData.equipos_arr||[])]; a[idx]={...a[idx],marca:e.target.value}; setEditResData(p=>({...p,equipos_arr:a})); }} placeholder="Marca" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                        <input value={eq.modelo||""} onChange={e => { const a=[...(editResData.equipos_arr||[])]; a[idx]={...a[idx],modelo:e.target.value}; setEditResData(p=>({...p,equipos_arr:a})); }} placeholder="Modelo" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                        <input value={eq.marca||""} onChange={e => { const a=[...(editResData.equipos_arr||[])]; a[eqIdx]={...a[idx],marca:e.target.value}; setEditResData(p=>({...p,equipos_arr:a})); }} placeholder="Marca" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                        <input value={eq.modelo||""} onChange={e => { const a=[...(editResData.equipos_arr||[])]; a[eqIdx]={...a[idx],modelo:e.target.value}; setEditResData(p=>({...p,equipos_arr:a})); }} placeholder="Modelo" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
                       </div>
                       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-                        <input value={eq.serie||""} onChange={e => { const a=[...(editResData.equipos_arr||[])]; a[idx]={...a[idx],serie:e.target.value}; setEditResData(p=>({...p,equipos_arr:a})); }} placeholder="No. Serie" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                        <input type="date" value={eq.fecha||""} onChange={e => { const a=[...(editResData.equipos_arr||[])]; a[idx]={...a[idx],fecha:e.target.value}; setEditResData(p=>({...p,equipos_arr:a})); }} max={new Date().toISOString().split("T")[0]} style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                        <input value={eq.serie||""} onChange={e => { const a=[...(editResData.equipos_arr||[])]; a[eqIdx]={...a[idx],serie:e.target.value}; setEditResData(p=>({...p,equipos_arr:a})); }} placeholder="No. Serie" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                        <input type="date" value={eq.fecha||""} onChange={e => { const a=[...(editResData.equipos_arr||[])]; a[eqIdx]={...a[idx],fecha:e.target.value}; setEditResData(p=>({...p,equipos_arr:a})); }} max={new Date().toISOString().split("T")[0]} style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
                       </div>
                     </div>
                   </div>
@@ -1417,21 +1417,21 @@ function Portal() {
                     + Agregar equipo
                   </button>
                 </div>
-                {newRes.equipos.map((eq, idx) => (
-                  <div key={idx} style={{ background:"#fff", border:"1px solid #fde68a", borderRadius:10, padding:"10px 12px", marginBottom:8 }}>
+                {newRes.equipos.map((eq, eqIdx) => (
+                  <div key={eqIdx} style={{ background:"#fff", border:"1px solid #fde68a", borderRadius:10, padding:"10px 12px", marginBottom:8 }}>
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-                      <div style={{ fontSize:12, fontWeight:700, color:"#a16207" }}>Equipo {idx+1}</div>
-                      {newRes.equipos.length > 1 && <button onClick={() => setNewRes(p => ({ ...p, equipos:p.equipos.filter((_,i)=>i!==idx) }))} style={{ fontSize:11, color:"#ef4444", background:"#fef2f2", border:"none", borderRadius:6, padding:"2px 8px", cursor:"pointer", fontFamily:"Outfit,sans-serif" }}>✕ Quitar</button>}
+                      <div style={{ fontSize:12, fontWeight:700, color:"#a16207" }}>Equipo {eqIdx+1}</div>
+                      {newRes.equipos.length > 1 && <button onClick={() => setNewRes(p => ({ ...p, equipos:p.equipos.filter((_,i)=>i!==eqIdx) }))} style={{ fontSize:11, color:"#ef4444", background:"#fef2f2", border:"none", borderRadius:6, padding:"2px 8px", cursor:"pointer", fontFamily:"Outfit,sans-serif" }}>✕ Quitar</button>}
                     </div>
                     <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                      <input value={eq.desc} onChange={e => { const eq2=[...newRes.equipos]; eq2[idx]={...eq2[idx],desc:e.target.value}; setNewRes(p=>({...p,equipos:eq2})); }} placeholder="Descripción (ej: Minisplit 1.5 ton sala)" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                      <input value={eq.desc} onChange={e => { const eq2=[...newRes.equipos]; eq2[eqIdx]={...eq2[idx],desc:e.target.value}; setNewRes(p=>({...p,equipos:eq2})); }} placeholder="Descripción (ej: Minisplit 1.5 ton sala)" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
                       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-                        <input value={eq.marca} onChange={e => { const eq2=[...newRes.equipos]; eq2[idx]={...eq2[idx],marca:e.target.value}; setNewRes(p=>({...p,equipos:eq2})); }} placeholder="Marca (LG, Carrier...)" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                        <input value={eq.modelo} onChange={e => { const eq2=[...newRes.equipos]; eq2[idx]={...eq2[idx],modelo:e.target.value}; setNewRes(p=>({...p,equipos:eq2})); }} placeholder="Modelo" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                        <input value={eq.marca} onChange={e => { const eq2=[...newRes.equipos]; eq2[eqIdx]={...eq2[idx],marca:e.target.value}; setNewRes(p=>({...p,equipos:eq2})); }} placeholder="Marca (LG, Carrier...)" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                        <input value={eq.modelo} onChange={e => { const eq2=[...newRes.equipos]; eq2[eqIdx]={...eq2[idx],modelo:e.target.value}; setNewRes(p=>({...p,equipos:eq2})); }} placeholder="Modelo" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
                       </div>
                       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-                        <input value={eq.serie} onChange={e => { const eq2=[...newRes.equipos]; eq2[idx]={...eq2[idx],serie:e.target.value}; setNewRes(p=>({...p,equipos:eq2})); }} placeholder="No. Serie" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                        <input type="date" value={eq.fecha} onChange={e => { const eq2=[...newRes.equipos]; eq2[idx]={...eq2[idx],fecha:e.target.value}; setNewRes(p=>({...p,equipos:eq2})); }} max={new Date().toISOString().split("T")[0]} style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                        <input value={eq.serie} onChange={e => { const eq2=[...newRes.equipos]; eq2[eqIdx]={...eq2[idx],serie:e.target.value}; setNewRes(p=>({...p,equipos:eq2})); }} placeholder="No. Serie" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                        <input type="date" value={eq.fecha} onChange={e => { const eq2=[...newRes.equipos]; eq2[eqIdx]={...eq2[idx],fecha:e.target.value}; setNewRes(p=>({...p,equipos:eq2})); }} max={new Date().toISOString().split("T")[0]} style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
                       </div>
                     </div>
                   </div>
