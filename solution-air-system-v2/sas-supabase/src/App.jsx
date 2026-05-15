@@ -31,6 +31,12 @@ const db = {
   getCRMUsuarioByEmail: (email) => db.get("crm_usuarios", `email=eq.${encodeURIComponent(email)}&select=*`),
   createCRMUsuario: (d) => db.post("crm_usuarios", d),
   updateCRMUsuario: (id, d) => db.patch("crm_usuarios", id, d),
+
+  getOfertas: () => db.get("ofertas", "select=*&activa=eq.true&order=created_at.asc"),
+  getAllOfertas: () => db.get("ofertas", "select=*&order=created_at.asc"),
+  createOferta: (d) => db.post("ofertas", d),
+  updateOferta: (id, d) => db.patch("ofertas", id, d),
+  deleteOferta: (id) => fetch(`${SUPA_URL}/rest/v1/ofertas?id=eq.${id}`, { method:"DELETE", headers: h }).then(r => r.ok),
 };
 
 // ── HELPERS ───────────────────────────────────────────────
@@ -103,16 +109,18 @@ const BTN = ({ onClick, style, children }) => (
 );
 
 function OfertasCRM({ showToast }) {
-  const getStored = () => { try { const s=localStorage.getItem("sas_ofertas_crm"); return s?JSON.parse(s):OFERTAS_DEFAULT; } catch{return OFERTAS_DEFAULT;} };
-  const [ofertas, setOfertasState] = useState(getStored);
+  const [ofertas, setOfertas] = useState([]);
+  const [loadingOf, setLoadingOf] = useState(true);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({});
   const [editing, setEditing] = useState(null);
 
-  const saveOfertas = (list) => {
-    setOfertasState(list);
-    try { localStorage.setItem("sas_ofertas_crm", JSON.stringify(list)); } catch{}
-  };
+  useEffect(() => {
+    db.getAllOfertas().then(res => {
+      setOfertas(Array.isArray(res) ? res : OFERTAS_DEFAULT);
+      setLoadingOf(false);
+    }).catch(() => { setOfertas(OFERTAS_DEFAULT); setLoadingOf(false); });
+  }, []);
 
   const abrir = (oferta) => {
     setForm(oferta ? { ...oferta } : { color:"#0ea5e9", icon:"🎁", activa:true, titulo:"", desc:"", badge:"", vig:"" });
@@ -120,23 +128,30 @@ function OfertasCRM({ showToast }) {
     setModal(true);
   };
 
-  const guardar = () => {
+  const guardar = async () => {
     if (!form.titulo || !form.desc) { alert("Completa titulo y descripcion"); return; }
-    const updated = editing
-      ? ofertas.map(o => o.id === editing ? { ...form } : o)
-      : [...ofertas, { ...form, id:"o"+Date.now() }];
-    saveOfertas(updated);
-    showToast(editing ? "Oferta actualizada ✅" : "Oferta creada ✅");
+    if (editing) {
+      await db.updateOferta(editing, { titulo:form.titulo, desc:form.desc, badge:form.badge||"", vig:form.vig||"", icon:form.icon||"🎁", color:form.color||"#0ea5e9", activa:form.activa });
+      showToast("Oferta actualizada ✅");
+    } else {
+      await db.createOferta({ titulo:form.titulo, desc:form.desc, badge:form.badge||"", vig:form.vig||"", icon:form.icon||"🎁", color:form.color||"#0ea5e9", activa:true });
+      showToast("Oferta creada ✅");
+    }
+    const res = await db.getAllOfertas();
+    setOfertas(Array.isArray(res) ? res : []);
     setModal(false); setForm({}); setEditing(null);
   };
 
-  const toggleActiva = (id) => {
-    saveOfertas(ofertas.map(o => o.id === id ? { ...o, activa:!o.activa } : o));
+  const toggleActiva = async (id, activa) => {
+    await db.updateOferta(id, { activa: !activa });
+    const res = await db.getAllOfertas();
+    setOfertas(Array.isArray(res) ? res : []);
   };
 
-  const eliminar = (id) => {
+  const eliminar = async (id) => {
     if (!window.confirm("¿Eliminar esta oferta?")) return;
-    saveOfertas(ofertas.filter(o => o.id !== id));
+    await db.deleteOferta(id);
+    setOfertas(p => p.filter(o => o.id !== id));
     showToast("Oferta eliminada");
   };
 
@@ -153,6 +168,7 @@ function OfertasCRM({ showToast }) {
         <BTN onClick={() => abrir(null)} style={{ background:"linear-gradient(135deg,#1d6fa4,#0284c7)", color:"#fff", padding:"10px 18px" }}>+ Nueva oferta</BTN>
       </div>
 
+      {loadingOf && <div style={{ textAlign:"center", padding:40, color:"#94a3b8" }}>⏳ Cargando ofertas...</div>}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:16 }}>
         {ofertas.map(o => (
           <div key={o.id} style={{ background:"#fff", border:"1px solid #e2e8f0", borderRadius:14, overflow:"hidden", boxShadow:"0 2px 8px rgba(0,0,0,.06)", opacity:o.activa?1:0.65 }}>
@@ -167,7 +183,7 @@ function OfertasCRM({ showToast }) {
             <div style={{ padding:"12px 16px" }}>
               <div style={{ fontSize:12, color:"#94a3b8", marginBottom:12 }}>🕐 {o.vig||"Sin fecha"}</div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr auto auto", gap:8 }}>
-                <BTN onClick={() => toggleActiva(o.id)} style={{ background:o.activa?"#fef9c3":"#f0fdf4", color:o.activa?"#a16207":"#15803d", border:`1px solid ${o.activa?"#fde68a":"#bbf7d0"}`, fontSize:12, padding:"7px 10px" }}>
+                <BTN onClick={() => toggleActiva(o.id, o.activa)} style={{ background:o.activa?"#fef9c3":"#f0fdf4", color:o.activa?"#a16207":"#15803d", border:`1px solid ${o.activa?"#fde68a":"#bbf7d0"}`, fontSize:12, padding:"7px 10px" }}>
                   {o.activa ? "⏸ Desactivar" : "▶ Activar"}
                 </BTN>
                 <BTN onClick={() => abrir(o)} style={{ background:"#eff6ff", color:"#1d6fa4", padding:"7px 12px", fontSize:14 }}>✏️</BTN>
@@ -870,8 +886,15 @@ function Portal() {
   const [newRes, setNewRes] = useState({ nombre:"", tipo:"residencial", direccion:"", equipos:[{desc:"",marca:"",modelo:"",serie:"",fecha:""}], lat:null, lng:null });
   const [gpsLoad, setGpsLoad] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [ofertasPortal, setOfertasPortal] = useState(OFERTAS_FALLBACK);
 
   const misRes = cliente?.residencias || [];
+
+  useEffect(() => {
+    db.getOfertas().then(res => {
+      if (Array.isArray(res) && res.length > 0) setOfertasPortal(res);
+    }).catch(() => {});
+  }, []);
 
   const loadData = async (cl) => {
     const [cts, hist] = await Promise.all([db.getCitasByCliente(cl.id), db.getHistorial(cl.id)]);
@@ -1349,8 +1372,8 @@ function Portal() {
               <div style={{ fontSize:13, color:"rgba(255,255,255,.8)", marginTop:3 }}>Solo para clientes Solution Air System</div>
             </div>
             <div style={{ padding:"16px 14px", display:"flex", flexDirection:"column", gap:14 }}>
-              {getOfertas().length === 0 && <div style={{ textAlign:"center", padding:32, color:"#94a3b8" }}>No hay ofertas activas por el momento.</div>}
-              {getOfertas().map(o => (
+              {ofertasPortal.length === 0 && <div style={{ textAlign:"center", padding:32, color:"#94a3b8" }}>No hay ofertas activas por el momento.</div>}
+              {ofertasPortal.map(o => (
                 <div key={o.id} style={{ borderRadius:20, overflow:"hidden", boxShadow:"0 4px 16px rgba(0,0,0,.1)" }}>
                   <div style={{ background:`linear-gradient(135deg,${o.color||"#1d6fa4"},${o.color||"#0284c7"}cc)`, padding:"18px 18px 14px" }}>
                     <div style={{ display:"flex", justifyContent:"space-between" }}>
