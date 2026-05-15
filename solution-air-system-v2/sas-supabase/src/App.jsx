@@ -232,8 +232,6 @@ function CRM() {
 
   useEffect(() => { if(usuario) load(); }, [usuario]); // eslint-disable-line
 
-  if (!usuario) return <CRMLogin onLogin={(u) => setUsuario(u)} />;
-
   const showToast = (msg, type = "ok") => { setToast({ msg, type }); setTimeout(() => setToast(null), 4000); };
 
   const confirmar = async (id, nota, nf, nh) => {
@@ -288,6 +286,8 @@ function CRM() {
       {badge > 0 && <span style={{ background:"#ef4444", color:"#fff", borderRadius:10, fontSize:11, padding:"1px 7px", fontWeight:700 }}>{badge}</span>}
     </div>
   );
+
+  if (!usuario) return <CRMLogin onLogin={(u) => setUsuario(u)} />;
 
   return (
     <div style={{ fontFamily:"Outfit,sans-serif", background:"#f8fafc", minHeight:"100vh", color:"#1e293b", display:"flex" }}>
