@@ -98,97 +98,122 @@ const OFERTAS_DEFAULT = [
   { id:"o3", titulo:"Programa de Referidos", badge:"$300 OFF", desc:"Recomienda a un amigo y ambos obtienen $300.", vig:"Sin fecha limite", color:"#10b981", icon:"🎁", activa:true },
 ];
 
+const BTN = ({ onClick, style, children }) => (
+  <button onClick={onClick} style={{ border:"none", borderRadius:9, padding:"9px 14px", fontFamily:"Outfit,sans-serif", fontSize:13, fontWeight:600, cursor:"pointer", transition:"opacity .2s", ...style }}>{children}</button>
+);
+
 function OfertasCRM({ showToast }) {
-  const useLS = (key, init) => {
-    const [v, sv] = useState(() => { try { const s=localStorage.getItem(key); return s?JSON.parse(s):init; } catch{return init;} });
-    const set = (val) => { const n=typeof val==="function"?val(v):val; sv(n); try{localStorage.setItem(key,JSON.stringify(n));}catch{} };
-    return [v, set];
-  };
-  const [ofertas, setOfertas] = useLS("sas_ofertas_crm", OFERTAS_DEFAULT);
+  const getStored = () => { try { const s=localStorage.getItem("sas_ofertas_crm"); return s?JSON.parse(s):OFERTAS_DEFAULT; } catch{return OFERTAS_DEFAULT;} };
+  const [ofertas, setOfertasState] = useState(getStored);
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState({});
   const [editing, setEditing] = useState(null);
 
+  const saveOfertas = (list) => {
+    setOfertasState(list);
+    try { localStorage.setItem("sas_ofertas_crm", JSON.stringify(list)); } catch{}
+  };
+
+  const abrir = (oferta) => {
+    setForm(oferta ? { ...oferta } : { color:"#0ea5e9", icon:"🎁", activa:true, titulo:"", desc:"", badge:"", vig:"" });
+    setEditing(oferta ? oferta.id : null);
+    setModal(true);
+  };
+
   const guardar = () => {
-    if (!form.titulo || !form.desc) return;
-    if (editing) {
-      setOfertas(p => p.map(o => o.id === editing ? { ...o, ...form } : o));
-      showToast("Oferta actualizada ✅");
-    } else {
-      setOfertas(p => [...p, { ...form, id:"o"+Date.now(), activa:true }]);
-      showToast("Oferta creada ✅");
-    }
+    if (!form.titulo || !form.desc) { alert("Completa titulo y descripcion"); return; }
+    const updated = editing
+      ? ofertas.map(o => o.id === editing ? { ...form } : o)
+      : [...ofertas, { ...form, id:"o"+Date.now() }];
+    saveOfertas(updated);
+    showToast(editing ? "Oferta actualizada ✅" : "Oferta creada ✅");
     setModal(false); setForm({}); setEditing(null);
   };
 
   const toggleActiva = (id) => {
-    setOfertas(p => p.map(o => o.id === id ? { ...o, activa: !o.activa } : o));
+    saveOfertas(ofertas.map(o => o.id === id ? { ...o, activa:!o.activa } : o));
   };
 
   const eliminar = (id) => {
-    setOfertas(p => p.filter(o => o.id !== id));
+    if (!window.confirm("¿Eliminar esta oferta?")) return;
+    saveOfertas(ofertas.filter(o => o.id !== id));
     showToast("Oferta eliminada");
   };
 
-  const COLORES = ["#f97316","#0ea5e9","#10b981","#8b5cf6","#ef4444","#f59e0b"];
+  const COLORES = ["#f97316","#0ea5e9","#10b981","#8b5cf6","#ef4444","#f59e0b","#1d6fa4","#ec4899"];
+  const inp = { width:"100%", padding:"10px 13px", border:"1px solid #e2e8f0", borderRadius:9, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" };
 
   return (
-    <div>
+    <div style={{ fontFamily:"Outfit,sans-serif" }}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
         <div>
           <h1 style={{ fontSize:22, fontWeight:800, color:"#0f172a" }}>🎁 Gestión de Ofertas</h1>
-          <p style={{ color:"#64748b", fontSize:13, marginTop:3 }}>Las ofertas activas se muestran a los clientes en el portal</p>
+          <p style={{ color:"#64748b", fontSize:13, marginTop:3 }}>Las activas se muestran a los clientes en el portal</p>
         </div>
-        <button onClick={() => { setForm({ color:"#0ea5e9", icon:"🎁", activa:true }); setEditing(null); setModal(true); }} style={{ background:"linear-gradient(135deg,#1d6fa4,#0284c7)", color:"#fff", padding:"10px 18px", border:"none", borderRadius:9, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontSize:14, fontWeight:600 }}>+ Nueva oferta</button>
+        <BTN onClick={() => abrir(null)} style={{ background:"linear-gradient(135deg,#1d6fa4,#0284c7)", color:"#fff", padding:"10px 18px" }}>+ Nueva oferta</BTN>
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:16 }}>
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))", gap:16 }}>
         {ofertas.map(o => (
-          <div key={o.id} className="cc" style={{ overflow:"hidden", opacity: o.activa ? 1 : 0.6 }}>
-            <div style={{ background:`linear-gradient(135deg,${o.color},${o.color}dd)`, padding:"16px 18px 12px" }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                <span style={{ fontSize:28 }}>{o.icon}</span>
-                <span style={{ background:"rgba(255,255,255,.25)", color:"#fff", padding:"4px 12px", borderRadius:20, fontSize:13, fontWeight:800 }}>{o.badge}</span>
+          <div key={o.id} style={{ background:"#fff", border:"1px solid #e2e8f0", borderRadius:14, overflow:"hidden", boxShadow:"0 2px 8px rgba(0,0,0,.06)", opacity:o.activa?1:0.65 }}>
+            <div style={{ background:`linear-gradient(135deg,${o.color},${o.color}cc)`, padding:"16px 18px 14px" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                <span style={{ fontSize:28 }}>{o.icon||"🎁"}</span>
+                {o.badge && <span style={{ background:"rgba(255,255,255,.3)", color:"#fff", padding:"3px 12px", borderRadius:20, fontSize:13, fontWeight:800 }}>{o.badge}</span>}
               </div>
               <div style={{ fontSize:16, fontWeight:800, color:"#fff", marginTop:8 }}>{o.titulo}</div>
               <div style={{ fontSize:13, color:"rgba(255,255,255,.9)", marginTop:3 }}>{o.desc}</div>
             </div>
             <div style={{ padding:"12px 16px" }}>
-              <div style={{ fontSize:12, color:"#94a3b8", marginBottom:10 }}>🕐 {o.vig}</div>
-              <div style={{ display:"flex", gap:8 }}>
-                <button onClick={() => toggleActiva(o.id)} style={{ flex:1, background: o.activa ? "#fef9c3" : "#f0fdf4", color: o.activa ? "#a16207" : "#15803d", border:`1px solid ${o.activa?"#fde68a":"#bbf7d0"}`, padding:"7px", fontSize:12, borderRadius:9, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>
+              <div style={{ fontSize:12, color:"#94a3b8", marginBottom:12 }}>🕐 {o.vig||"Sin fecha"}</div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr auto auto", gap:8 }}>
+                <BTN onClick={() => toggleActiva(o.id)} style={{ background:o.activa?"#fef9c3":"#f0fdf4", color:o.activa?"#a16207":"#15803d", border:`1px solid ${o.activa?"#fde68a":"#bbf7d0"}`, fontSize:12, padding:"7px 10px" }}>
                   {o.activa ? "⏸ Desactivar" : "▶ Activar"}
-                </button>
-                <button onClick={() => { setForm({...o}); setEditing(o.id); setModal(true); }} style={{ background:"#eff6ff", color:"#1d6fa4", padding:"7px 12px", fontSize:12, border:"none", borderRadius:9, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>✏️</button>
-                <button onClick={() => eliminar(o.id)} style={{ background:"#fef2f2", color:"#dc2626", padding:"7px 12px", fontSize:12, border:"none", borderRadius:9, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>🗑</button>
+                </BTN>
+                <BTN onClick={() => abrir(o)} style={{ background:"#eff6ff", color:"#1d6fa4", padding:"7px 12px", fontSize:14 }}>✏️</BTN>
+                <BTN onClick={() => eliminar(o.id)} style={{ background:"#fef2f2", color:"#dc2626", padding:"7px 12px", fontSize:14 }}>🗑</BTN>
               </div>
             </div>
           </div>
         ))}
+        {ofertas.length === 0 && <div style={{ gridColumn:"1/-1", textAlign:"center", padding:40, color:"#94a3b8" }}>Sin ofertas. Crea una nueva.</div>}
       </div>
 
       {modal && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:100, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }} onClick={() => { setModal(false); setForm({}); setEditing(null); }}>
-          <div style={{ background:"#fff", borderRadius:18, padding:26, width:520, maxWidth:"100%", maxHeight:"90vh", overflowY:"auto", boxShadow:"0 8px 32px rgba(0,0,0,.12)" }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontWeight:800, fontSize:18, marginBottom:16, color:"#0f172a" }}>{editing ? "✏️ Editar oferta" : "🎁 Nueva oferta"}</div>
-            <div style={{ display:"flex", flexDirection:"column", gap:13 }}>
-              <div style={{ display:"flex", flexDirection:"column", gap:4 }}><label style={{ fontSize:12, color:"#64748b", fontWeight:500 }}>Título *</label><input style={{ background:"#f8fafc", border:"1px solid #e2e8f0", color:"#1e293b", padding:"10px 14px", borderRadius:8, fontFamily:"Outfit,sans-serif", fontSize:14, width:"100%", outline:"none", boxSizing:"border-box" }} value={form.titulo||""} onChange={e=>setForm(p=>({...p,titulo:e.target.value}))} placeholder="Ej: Mantenimiento de Verano"/></div>
-              <div style={{ display:"flex", flexDirection:"column", gap:4 }}><label style={{ fontSize:12, color:"#64748b", fontWeight:500 }}>Descripción *</label><textarea rows={2} style={{ background:"#f8fafc", border:"1px solid #e2e8f0", color:"#1e293b", padding:"10px 14px", borderRadius:8, fontFamily:"Outfit,sans-serif", fontSize:14, width:"100%", outline:"none", boxSizing:"border-box", resize:"none" }} value={form.desc||""} onChange={e=>setForm(p=>({...p,desc:e.target.value}))} placeholder="Describe la oferta..." style={{resize:"none"}}/></div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-                <div style={{ display:"flex", flexDirection:"column", gap:4 }}><label style={{ fontSize:12, color:"#64748b", fontWeight:500 }}>Badge (ej: 20% OFF)</label><input style={{ background:"#f8fafc", border:"1px solid #e2e8f0", color:"#1e293b", padding:"10px 14px", borderRadius:8, fontFamily:"Outfit,sans-serif", fontSize:14, width:"100%", outline:"none", boxSizing:"border-box" }} value={form.badge||""} onChange={e=>setForm(p=>({...p,badge:e.target.value}))} placeholder="20% OFF"/></div>
-                <div style={{ display:"flex", flexDirection:"column", gap:4 }}><label style={{ fontSize:12, color:"#64748b", fontWeight:500 }}>Vigencia</label><input style={{ background:"#f8fafc", border:"1px solid #e2e8f0", color:"#1e293b", padding:"10px 14px", borderRadius:8, fontFamily:"Outfit,sans-serif", fontSize:14, width:"100%", outline:"none", boxSizing:"border-box" }} value={form.vig||""} onChange={e=>setForm(p=>({...p,vig:e.target.value}))} placeholder="Hasta 30 Jun 2025"/></div>
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }} onClick={() => { setModal(false); setForm({}); setEditing(null); }}>
+          <div style={{ background:"#fff", borderRadius:18, padding:26, width:500, maxWidth:"100%", maxHeight:"90vh", overflowY:"auto", boxShadow:"0 8px 32px rgba(0,0,0,.15)", fontFamily:"Outfit,sans-serif" }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight:800, fontSize:18, marginBottom:20, color:"#0f172a" }}>{editing ? "✏️ Editar oferta" : "🎁 Nueva oferta"}</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:5 }}>TÍTULO *</label>
+                <input value={form.titulo||""} onChange={e=>setForm(p=>({...p,titulo:e.target.value}))} placeholder="Ej: Mantenimiento de Verano" style={inp}/>
+              </div>
+              <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:5 }}>DESCRIPCIÓN *</label>
+                <textarea value={form.desc||""} onChange={e=>setForm(p=>({...p,desc:e.target.value}))} placeholder="Describe la oferta..." rows={2} style={{...inp, resize:"none"}}/>
               </div>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-                <div style={{ display:"flex", flexDirection:"column", gap:4 }}><label style={{ fontSize:12, color:"#64748b", fontWeight:500 }}>Ícono</label><input style={{ background:"#f8fafc", border:"1px solid #e2e8f0", color:"#1e293b", padding:"10px 14px", borderRadius:8, fontFamily:"Outfit,sans-serif", fontSize:14, width:"100%", outline:"none", boxSizing:"border-box" }} value={form.icon||""} onChange={e=>setForm(p=>({...p,icon:e.target.value}))} placeholder="🎁"/></div>
-                <div style={{ display:"flex", flexDirection:"column", gap:4 }}><label style={{ fontSize:12, color:"#64748b", fontWeight:500 }}>Color</label>
-                  <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginTop:4 }}>
-                    {COLORES.map(c => <div key={c} onClick={()=>setForm(p=>({...p,color:c}))} style={{ width:28, height:28, borderRadius:"50%", background:c, cursor:"pointer", border:`3px solid ${form.color===c?"#0f172a":"transparent"}` }}/>)}
-                  </div>
+                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:5 }}>BADGE (ej: 20% OFF)</label>
+                  <input value={form.badge||""} onChange={e=>setForm(p=>({...p,badge:e.target.value}))} placeholder="20% OFF" style={inp}/>
+                </div>
+                <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:5 }}>ÍCONO (emoji)</label>
+                  <input value={form.icon||""} onChange={e=>setForm(p=>({...p,icon:e.target.value}))} placeholder="☀️" style={inp}/>
                 </div>
               </div>
+              <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:5 }}>VIGENCIA</label>
+                <input value={form.vig||""} onChange={e=>setForm(p=>({...p,vig:e.target.value}))} placeholder="Valido hasta 30 Jun 2025" style={inp}/>
+              </div>
+              <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:8 }}>COLOR</label>
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                  {COLORES.map(c => <div key={c} onClick={()=>setForm(p=>({...p,color:c}))} style={{ width:32, height:32, borderRadius:"50%", background:c, cursor:"pointer", border:`3px solid ${form.color===c?"#0f172a":"transparent"}`, transition:"border .2s" }}/>)}
+                </div>
+              </div>
+              {form.color && <div style={{ background:`linear-gradient(135deg,${form.color},${form.color}cc)`, borderRadius:12, padding:"12px 16px", color:"#fff" }}>
+                <div style={{ fontSize:14, fontWeight:700 }}>{form.icon} {form.titulo||"Vista previa"}</div>
+                <div style={{ fontSize:12, opacity:.9, marginTop:3 }}>{form.desc}</div>
+              </div>}
             </div>
             <div style={{ display:"flex", gap:10, marginTop:20 }}>
-              <button onClick={()=>{setModal(false);setForm({});setEditing(null);}} style={{ flex:1, background:"#f1f5f9", color:"#64748b", padding:"12px", border:"none", borderRadius:9, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>Cancelar</button>
-              <button onClick={guardar} style={{ flex:2, background:"linear-gradient(135deg,#1d6fa4,#0284c7)", color:"#fff", padding:"12px", border:"none", borderRadius:9, cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>Guardar</button>
+              <BTN onClick={()=>{setModal(false);setForm({});setEditing(null);}} style={{ flex:1, background:"#f1f5f9", color:"#64748b", padding:"12px" }}>Cancelar</BTN>
+              <BTN onClick={guardar} style={{ flex:2, background:"linear-gradient(135deg,#1d6fa4,#0284c7)", color:"#fff", padding:"12px", fontSize:15 }}>Guardar</BTN>
             </div>
           </div>
         </div>
@@ -196,6 +221,7 @@ function OfertasCRM({ showToast }) {
     </div>
   );
 }
+
 
 // ── CRM LOGIN ─────────────────────────────────────────────
 function CRMLogin({ onLogin }) {
@@ -388,24 +414,26 @@ function CRM() {
   const crearCliente = async () => {
     if (!form.nombre || !form.email) return;
     const avatar = form.nombre.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
-    // Generate temp password from phone last 4 digits or default
     const tempPass = form.telefono ? form.telefono.slice(-4) : "1234";
-    const res = await db.createCliente({ nombre: form.nombre, email: form.email, password_hash: tempPass, telefono: form.telefono || "", avatar });
+    const res = await db.createCliente({ nombre:form.nombre, email:form.email, password_hash:tempPass, telefono:form.telefono||"", avatar });
     const cl = Array.isArray(res) ? res[0] : res;
     if (cl?.id) {
+      const eqs = (form.equiposArr||[]).filter(e=>e.desc||e.marca||e.modelo||e.serie||e.fecha);
+      const primerEq = eqs[0] || {};
       await db.createResidencia({
         cliente_id: cl.id,
-        nombre: form.resNombre || "Residencia principal",
+        nombre: form.resNombre || (form.tipoRes==="comercial" ? "Local principal" : "Residencia principal"),
+        tipo: form.tipoRes || "residencial",
         direccion: form.direccion || "",
-        equipos: form.equipos || "",
-        marca: form.marca || "",
-        modelo: form.modelo || "",
-        serie: form.serie || "",
-        fecha_instalacion: form.fecha_instalacion || null,
+        equipos: eqs.length > 0 ? JSON.stringify(eqs) : "",
+        marca: primerEq.marca || "",
+        modelo: primerEq.modelo || "",
+        serie: primerEq.serie || "",
+        fecha_instalacion: primerEq.fecha || null,
         lat: null, lng: null
       });
     }
-    showToast("Cliente creado ✅ Contrasena temporal: " + tempPass);
+    showToast("Cliente creado ✅  Contrasena: " + tempPass);
     setModal(null); setForm({});
     load();
   };
@@ -436,6 +464,7 @@ function CRM() {
         <Nav id="citas"     icon="📅" label="Gestion de citas"  badge={pendientes.length} />
         <Nav id="clientes"  icon="👤" label="Clientes" />
         <Nav id="historial" icon="🔧" label="Historial" />
+        <Nav id="ofertas"   icon="🎁" label="Ofertas" />
         {usuario?.rol === "admin" && <Nav id="usuarios" icon="👥" label="Usuarios CRM" />}
         <div style={{ borderTop:"1px solid #e2e8f0", margin:"8px 4px" }} />
         <div style={{ padding:"8px 14px" }}>
@@ -631,39 +660,71 @@ function CRM() {
           <div className="mo" onClick={e => e.stopPropagation()}>
             <div style={{ fontWeight:800, fontSize:18, marginBottom:16, color:"#0f172a" }}>👤 Nuevo cliente</div>
             <div style={{ display:"flex", flexDirection:"column", gap:13 }}>
+
+              {/* DATOS CLIENTE */}
               <div style={{ background:"#f0f9ff", border:"1px solid #bae6fd", borderRadius:12, padding:"12px 14px" }}>
                 <div style={{ fontSize:13, fontWeight:700, color:"#0369a1", marginBottom:10 }}>👤 Datos del cliente</div>
                 <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                  <div className="fl"><label>Nombre completo *</label><input value={form.nombre || ""} onChange={e => setForm(p => ({ ...p, nombre:e.target.value }))} /></div>
+                  <div className="fl"><label>Nombre completo *</label><input value={form.nombre||""} onChange={e=>setForm(p=>({...p,nombre:e.target.value}))}/></div>
                   <div className="g2">
-                    <div className="fl"><label>Email *</label><input type="email" value={form.email || ""} onChange={e => setForm(p => ({ ...p, email:e.target.value }))} /></div>
-                    <div className="fl"><label>Telefono</label><input value={form.telefono || ""} onChange={e => setForm(p => ({ ...p, telefono:e.target.value }))} /></div>
+                    <div className="fl"><label>Email *</label><input type="email" value={form.email||""} onChange={e=>setForm(p=>({...p,email:e.target.value}))}/></div>
+                    <div className="fl"><label>Telefono</label><input value={form.telefono||""} onChange={e=>setForm(p=>({...p,telefono:e.target.value}))}/></div>
                   </div>
                 </div>
               </div>
+
+              {/* RESIDENCIA */}
               <div style={{ background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:12, padding:"12px 14px" }}>
-                <div style={{ fontSize:13, fontWeight:700, color:"#15803d", marginBottom:10 }}>🏠 Residencia</div>
+                <div style={{ fontSize:13, fontWeight:700, color:"#15803d", marginBottom:10 }}>🏠 Residencia / Local</div>
                 <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                  <div className="fl"><label>Nombre de residencia</label><input value={form.resNombre || ""} onChange={e => setForm(p => ({ ...p, resNombre:e.target.value }))} placeholder="Casa principal, Oficina..." /></div>
-                  <div className="fl"><label>Direccion</label><input value={form.direccion || ""} onChange={e => setForm(p => ({ ...p, direccion:e.target.value }))} placeholder="Calle, Colonia, Ciudad" /></div>
+                  <div>
+                    <label style={{ fontSize:11, fontWeight:600, color:"#64748b", display:"block", marginBottom:6 }}>TIPO</label>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                      {[{val:"residencial",icon:"🏠",label:"Residencial"},{val:"comercial",icon:"🏢",label:"Comercial"}].map(t=>(
+                        <button key={t.val} className="cb" onClick={()=>setForm(p=>({...p,tipoRes:t.val}))}
+                          style={{ padding:"10px 8px", borderRadius:10, border:`2px solid ${(form.tipoRes||"residencial")===t.val?"#15803d":"#e2e8f0"}`, background:(form.tipoRes||"residencial")===t.val?"#f0fdf4":"#fff", color:(form.tipoRes||"residencial")===t.val?"#15803d":"#64748b", display:"flex", flexDirection:"column", alignItems:"center", gap:3, fontSize:13 }}>
+                          <span style={{fontSize:20}}>{t.icon}</span>{t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="fl"><label>Nombre</label><input value={form.resNombre||""} onChange={e=>setForm(p=>({...p,resNombre:e.target.value}))} placeholder={(form.tipoRes||"residencial")==="comercial"?"Oficina, Local...":"Casa principal..."}/></div>
+                  <div className="fl"><label>Direccion</label><input value={form.direccion||""} onChange={e=>setForm(p=>({...p,direccion:e.target.value}))} placeholder="Calle, Sector, Ciudad"/></div>
                 </div>
               </div>
+
+              {/* EQUIPOS */}
               <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:12, padding:"12px 14px" }}>
-                <div style={{ fontSize:13, fontWeight:700, color:"#a16207", marginBottom:10 }}>❄️ Equipo instalado</div>
-                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                  <div className="fl"><label>Descripcion</label><input value={form.equipos || ""} onChange={e => setForm(p => ({ ...p, equipos:e.target.value }))} placeholder="Minisplit 1.5 ton" /></div>
-                  <div className="g2">
-                    <div className="fl"><label>Marca</label><input value={form.marca || ""} onChange={e => setForm(p => ({ ...p, marca:e.target.value }))} placeholder="LG, Carrier..." /></div>
-                    <div className="fl"><label>Modelo</label><input value={form.modelo || ""} onChange={e => setForm(p => ({ ...p, modelo:e.target.value }))} placeholder="LV181HV4" /></div>
-                  </div>
-                  <div className="g2">
-                    <div className="fl"><label>No. de serie</label><input value={form.serie || ""} onChange={e => setForm(p => ({ ...p, serie:e.target.value }))} placeholder="SN-123456" /></div>
-                    <div className="fl"><label>Fecha instalacion</label><input type="date" value={form.fecha_instalacion || ""} onChange={e => setForm(p => ({ ...p, fecha_instalacion:e.target.value }))} /></div>
-                  </div>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#a16207" }}>❄️ Equipos de AC</div>
+                  <button className="cb" onClick={()=>setForm(p=>({...p,equiposArr:[...(p.equiposArr||[{desc:"",marca:"",modelo:"",serie:"",fecha:""}]),{desc:"",marca:"",modelo:"",serie:"",fecha:""}]}))}
+                    style={{ fontSize:12, color:"#1d6fa4", background:"#eff6ff", border:"1px solid #bfdbfe", padding:"4px 10px" }}>
+                    + Equipo
+                  </button>
                 </div>
+                {(form.equiposArr||[{desc:"",marca:"",modelo:"",serie:"",fecha:""}]).map((eq,idx)=>(
+                  <div key={idx} style={{ background:"#fff", border:"1px solid #fde68a", borderRadius:10, padding:"10px 12px", marginBottom:8 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
+                      <span style={{ fontSize:12, fontWeight:700, color:"#a16207" }}>Unidad {idx+1}</span>
+                      {(form.equiposArr||[]).length>1&&<button className="cb" onClick={()=>setForm(p=>({...p,equiposArr:p.equiposArr.filter((_,i)=>i!==idx)}))} style={{ fontSize:11, color:"#ef4444", background:"#fef2f2", padding:"2px 8px" }}>✕</button>}
+                    </div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+                      <input value={eq.desc||""} onChange={e=>{const a=[...(form.equiposArr||[])];a[idx]={...a[idx],desc:e.target.value};setForm(p=>({...p,equiposArr:a}));}} placeholder="Descripción (Minisplit 1.5 ton sala)" style={{ width:"100%", padding:"9px 12px", border:"1px solid #e2e8f0", borderRadius:9, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }}/>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:7 }}>
+                        <input value={eq.marca||""} onChange={e=>{const a=[...(form.equiposArr||[])];a[idx]={...a[idx],marca:e.target.value};setForm(p=>({...p,equiposArr:a}));}} placeholder="Marca" style={{ width:"100%", padding:"9px 12px", border:"1px solid #e2e8f0", borderRadius:9, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }}/>
+                        <input value={eq.modelo||""} onChange={e=>{const a=[...(form.equiposArr||[])];a[idx]={...a[idx],modelo:e.target.value};setForm(p=>({...p,equiposArr:a}));}} placeholder="Modelo" style={{ width:"100%", padding:"9px 12px", border:"1px solid #e2e8f0", borderRadius:9, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }}/>
+                      </div>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:7 }}>
+                        <input value={eq.serie||""} onChange={e=>{const a=[...(form.equiposArr||[])];a[idx]={...a[idx],serie:e.target.value};setForm(p=>({...p,equiposArr:a}));}} placeholder="No. Serie" style={{ width:"100%", padding:"9px 12px", border:"1px solid #e2e8f0", borderRadius:9, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }}/>
+                        <input type="date" value={eq.fecha||""} onChange={e=>{const a=[...(form.equiposArr||[])];a[idx]={...a[idx],fecha:e.target.value};setForm(p=>({...p,equiposArr:a}));}} max={new Date().toISOString().split("T")[0]} style={{ width:"100%", padding:"9px 12px", border:"1px solid #e2e8f0", borderRadius:9, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }}/>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
+
               <div style={{ background:"#f1f5f9", border:"1px solid #e2e8f0", borderRadius:10, padding:"10px 14px", fontSize:12, color:"#64748b" }}>
-                💡 La contrasena temporal sera los ultimos 4 digitos del telefono
+                💡 Contrasena temporal: ultimos 4 digitos del telefono
               </div>
             </div>
             <div style={{ display:"flex", gap:10, marginTop:20 }}>
