@@ -40,6 +40,17 @@ const today = () => new Date().toISOString().split("T")[0];
 const HORAS = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00"];
 const TIPOS = ["Mantenimiento preventivo","Revision general","Limpieza de filtros","Recarga de gas","Reparacion","Instalacion nueva"];
 
+const parseEquipos = (equipos) => {
+  if (!equipos) return [];
+  try { 
+    const parsed = JSON.parse(equipos);
+    if (Array.isArray(parsed)) return parsed;
+    return [{ desc:equipos, marca:"", modelo:"", serie:"", fecha:"" }];
+  } catch { 
+    return equipos ? [{ desc:equipos, marca:"", modelo:"", serie:"", fecha:"" }] : [];
+  }
+};
+
 const nextMant = (fechaInstalacion) => {
   if (!fechaInstalacion) return null;
   const d = new Date(fechaInstalacion + "T00:00:00");
@@ -53,11 +64,12 @@ const diasParaMant = (fechaInstalacion) => {
   if (!next) return null;
   return Math.ceil((new Date(next + "T00:00:00") - new Date()) / 86400000);
 };
-const OFERTAS = [
-  { id:"o1", titulo:"Mantenimiento de Verano", badge:"20% OFF", desc:"Limpieza profunda + revision de gas.", vig:"Valido hasta 30 Jun 2025", grad:"linear-gradient(135deg,#f97316,#ea580c)", icon:"☀️" },
-  { id:"o2", titulo:"Plan Anual 3x2", badge:"3 x 2", desc:"Contrata 3 mantenimientos y el tercero es gratis.", vig:"Oferta permanente", grad:"linear-gradient(135deg,#0ea5e9,#0284c7)", icon:"📋" },
-  { id:"o3", titulo:"Programa de Referidos", badge:"$300 OFF", desc:"Recomienda a un amigo y ambos obtienen $300.", vig:"Sin fecha limite", grad:"linear-gradient(135deg,#10b981,#059669)", icon:"🎁" },
+const OFERTAS_FALLBACK = [
+  { id:"o1", titulo:"Mantenimiento de Verano", badge:"20% OFF", desc:"Limpieza profunda + revision de gas.", vig:"Valido hasta 30 Jun 2025", color:"#f97316", icon:"☀️", activa:true },
+  { id:"o2", titulo:"Plan Anual 3x2", badge:"3 x 2", desc:"Contrata 3 mantenimientos y el tercero es gratis.", vig:"Oferta permanente", color:"#0ea5e9", icon:"📋", activa:true },
+  { id:"o3", titulo:"Programa de Referidos", badge:"$300 OFF", desc:"Recomienda a un amigo y ambos obtienen $300.", vig:"Sin fecha limite", color:"#10b981", icon:"🎁", activa:true },
 ];
+const getOfertas = () => { try { const s=localStorage.getItem("sas_ofertas_crm"); return s?JSON.parse(s).filter(o=>o.activa):OFERTAS_FALLBACK; } catch{return OFERTAS_FALLBACK;} };
 
 const SC = {
   "Confirmada":               { bg:"#dcfce7", color:"#15803d" },
@@ -77,6 +89,113 @@ export default function App() {
   return <Portal />;
 }
 
+
+
+// ── OFERTAS CRM ───────────────────────────────────────────
+const OFERTAS_DEFAULT = [
+  { id:"o1", titulo:"Mantenimiento de Verano", badge:"20% OFF", desc:"Limpieza profunda + revision de gas.", vig:"Valido hasta 30 Jun 2025", color:"#f97316", icon:"☀️", activa:true },
+  { id:"o2", titulo:"Plan Anual 3x2", badge:"3 x 2", desc:"Contrata 3 mantenimientos y el tercero es gratis.", vig:"Oferta permanente", color:"#0ea5e9", icon:"📋", activa:true },
+  { id:"o3", titulo:"Programa de Referidos", badge:"$300 OFF", desc:"Recomienda a un amigo y ambos obtienen $300.", vig:"Sin fecha limite", color:"#10b981", icon:"🎁", activa:true },
+];
+
+function OfertasCRM({ showToast }) {
+  const useLS = (key, init) => {
+    const [v, sv] = useState(() => { try { const s=localStorage.getItem(key); return s?JSON.parse(s):init; } catch{return init;} });
+    const set = (val) => { const n=typeof val==="function"?val(v):val; sv(n); try{localStorage.setItem(key,JSON.stringify(n));}catch{} };
+    return [v, set];
+  };
+  const [ofertas, setOfertas] = useLS("sas_ofertas_crm", OFERTAS_DEFAULT);
+  const [modal, setModal] = useState(false);
+  const [form, setForm] = useState({});
+  const [editing, setEditing] = useState(null);
+
+  const guardar = () => {
+    if (!form.titulo || !form.desc) return;
+    if (editing) {
+      setOfertas(p => p.map(o => o.id === editing ? { ...o, ...form } : o));
+      showToast("Oferta actualizada ✅");
+    } else {
+      setOfertas(p => [...p, { ...form, id:"o"+Date.now(), activa:true }]);
+      showToast("Oferta creada ✅");
+    }
+    setModal(false); setForm({}); setEditing(null);
+  };
+
+  const toggleActiva = (id) => {
+    setOfertas(p => p.map(o => o.id === id ? { ...o, activa: !o.activa } : o));
+  };
+
+  const eliminar = (id) => {
+    setOfertas(p => p.filter(o => o.id !== id));
+    showToast("Oferta eliminada");
+  };
+
+  const COLORES = ["#f97316","#0ea5e9","#10b981","#8b5cf6","#ef4444","#f59e0b"];
+
+  return (
+    <div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+        <div>
+          <h1 style={{ fontSize:22, fontWeight:800, color:"#0f172a" }}>🎁 Gestión de Ofertas</h1>
+          <p style={{ color:"#64748b", fontSize:13, marginTop:3 }}>Las ofertas activas se muestran a los clientes en el portal</p>
+        </div>
+        <button className="cb" onClick={() => { setForm({ color:"#0ea5e9", icon:"🎁", activa:true }); setEditing(null); setModal(true); }} style={{ background:"linear-gradient(135deg,#1d6fa4,#0284c7)", color:"#fff", padding:"10px 18px" }}>+ Nueva oferta</button>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:16 }}>
+        {ofertas.map(o => (
+          <div key={o.id} className="cc" style={{ overflow:"hidden", opacity: o.activa ? 1 : 0.6 }}>
+            <div style={{ background:`linear-gradient(135deg,${o.color},${o.color}dd)`, padding:"16px 18px 12px" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                <span style={{ fontSize:28 }}>{o.icon}</span>
+                <span style={{ background:"rgba(255,255,255,.25)", color:"#fff", padding:"4px 12px", borderRadius:20, fontSize:13, fontWeight:800 }}>{o.badge}</span>
+              </div>
+              <div style={{ fontSize:16, fontWeight:800, color:"#fff", marginTop:8 }}>{o.titulo}</div>
+              <div style={{ fontSize:13, color:"rgba(255,255,255,.9)", marginTop:3 }}>{o.desc}</div>
+            </div>
+            <div style={{ padding:"12px 16px" }}>
+              <div style={{ fontSize:12, color:"#94a3b8", marginBottom:10 }}>🕐 {o.vig}</div>
+              <div style={{ display:"flex", gap:8 }}>
+                <button className="cb" onClick={() => toggleActiva(o.id)} style={{ flex:1, background: o.activa ? "#fef9c3" : "#f0fdf4", color: o.activa ? "#a16207" : "#15803d", border:`1px solid ${o.activa?"#fde68a":"#bbf7d0"}`, padding:"7px", fontSize:12 }}>
+                  {o.activa ? "⏸ Desactivar" : "▶ Activar"}
+                </button>
+                <button className="cb" onClick={() => { setForm({...o}); setEditing(o.id); setModal(true); }} style={{ background:"#eff6ff", color:"#1d6fa4", padding:"7px 12px", fontSize:12 }}>✏️</button>
+                <button className="cb" onClick={() => eliminar(o.id)} style={{ background:"#fef2f2", color:"#dc2626", padding:"7px 12px", fontSize:12 }}>🗑</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {modal && (
+        <div className="ov" onClick={() => { setModal(false); setForm({}); setEditing(null); }}>
+          <div className="mo" onClick={e => e.stopPropagation()}>
+            <div style={{ fontWeight:800, fontSize:18, marginBottom:16, color:"#0f172a" }}>{editing ? "✏️ Editar oferta" : "🎁 Nueva oferta"}</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:13 }}>
+              <div className="fl"><label>Título *</label><input value={form.titulo||""} onChange={e=>setForm(p=>({...p,titulo:e.target.value}))} placeholder="Ej: Mantenimiento de Verano"/></div>
+              <div className="fl"><label>Descripción *</label><textarea rows={2} value={form.desc||""} onChange={e=>setForm(p=>({...p,desc:e.target.value}))} placeholder="Describe la oferta..." style={{resize:"none"}}/></div>
+              <div className="g2">
+                <div className="fl"><label>Badge (ej: 20% OFF)</label><input value={form.badge||""} onChange={e=>setForm(p=>({...p,badge:e.target.value}))} placeholder="20% OFF"/></div>
+                <div className="fl"><label>Vigencia</label><input value={form.vig||""} onChange={e=>setForm(p=>({...p,vig:e.target.value}))} placeholder="Hasta 30 Jun 2025"/></div>
+              </div>
+              <div className="g2">
+                <div className="fl"><label>Ícono</label><input value={form.icon||""} onChange={e=>setForm(p=>({...p,icon:e.target.value}))} placeholder="🎁"/></div>
+                <div className="fl"><label>Color</label>
+                  <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginTop:4 }}>
+                    {COLORES.map(c => <div key={c} onClick={()=>setForm(p=>({...p,color:c}))} style={{ width:28, height:28, borderRadius:"50%", background:c, cursor:"pointer", border:`3px solid ${form.color===c?"#0f172a":"transparent"}` }}/>)}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:10, marginTop:20 }}>
+              <button className="cb" onClick={()=>{setModal(false);setForm({});setEditing(null);}} style={{ flex:1, background:"#f1f5f9", color:"#64748b", padding:"12px" }}>Cancelar</button>
+              <button className="cb" onClick={guardar} style={{ flex:2, background:"linear-gradient(135deg,#1d6fa4,#0284c7)", color:"#fff", padding:"12px" }}>Guardar</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── CRM LOGIN ─────────────────────────────────────────────
 function CRMLogin({ onLogin }) {
@@ -380,6 +499,11 @@ function CRM() {
           </div>
         )}
 
+        {/* OFERTAS */}
+        {tab === "ofertas" && (
+          <OfertasCRM showToast={showToast} />
+        )}
+
         {/* USUARIOS CRM */}
         {!loading && tab === "usuarios" && usuario?.rol === "admin" && (
           <UsuariosCRM showToast={showToast} />
@@ -394,27 +518,57 @@ function CRM() {
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
               {clientes.map(cl => (
-                <div key={cl.id} className="cc" style={{ padding:18 }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
+                <div key={cl.id} className="cc" style={{ padding:18, cursor:"pointer" }} onClick={() => setForm(f => f.clienteId === cl.id ? {} : { clienteId: cl.id })}>
+                  <div style={{ display:"flex", alignItems:"center", gap:12 }}>
                     <div style={{ width:44, height:44, borderRadius:"50%", background:"linear-gradient(135deg,#1d6fa4,#0284c7)", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontWeight:700, fontSize:16 }}>{cl.avatar || cl.nombre?.slice(0,2).toUpperCase()}</div>
-                    <div>
+                    <div style={{ flex:1 }}>
                       <div style={{ fontWeight:700, fontSize:16 }}>{cl.nombre}</div>
                       <div style={{ fontSize:13, color:"#64748b" }}>{cl.email} · {cl.telefono}</div>
+                      <div style={{ fontSize:12, color:"#94a3b8", marginTop:2 }}>{cl.residencias?.length || 0} residencia(s)</div>
                     </div>
+                    <span style={{ fontSize:12, color:"#94a3b8" }}>{form.clienteId === cl.id ? "▲" : "▼"}</span>
                   </div>
-                  <div style={{ fontSize:13, fontWeight:600, color:"#64748b", marginBottom:8 }}>Residencias ({cl.residencias?.length || 0})</div>
-                  <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                    {(cl.residencias || []).map(r => (
-                      <div key={r.id} style={{ background:"#f8fafc", border:"1px solid #e2e8f0", borderRadius:10, padding:"10px 14px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                        <div>
-                          <div style={{ fontWeight:600, fontSize:14 }}>{r.tipo==="comercial"?"🏢":"🏠"} {r.nombre} <span style={{ fontSize:11, color:"#94a3b8", textTransform:"capitalize" }}>({r.tipo||"residencial"})</span></div>
-                          <div style={{ fontSize:13, color:"#64748b", marginTop:2 }}>📍 {r.direccion}</div>
-                          {r.equipos && <div style={{ fontSize:12, color:"#94a3b8", marginTop:1 }}>❄️ {r.equipos}</div>}
+                  {form.clienteId === cl.id && (
+                    <div className="fade" style={{ marginTop:14, borderTop:"1px solid #f1f5f9", paddingTop:14 }}>
+                      {(cl.residencias || []).length === 0 && <div style={{ fontSize:13, color:"#94a3b8", textAlign:"center", padding:"10px 0" }}>Sin residencias registradas</div>}
+                      {(cl.residencias || []).map(r => (
+                        <div key={r.id} style={{ background:"#f8fafc", border:"1px solid #e2e8f0", borderRadius:12, padding:"12px 14px", marginBottom:10 }}>
+                          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                            <div style={{ fontWeight:700, fontSize:14 }}>{r.tipo==="comercial"?"🏢":"🏠"} {r.nombre} <span style={{ fontSize:11, color:"#94a3b8", textTransform:"capitalize", fontWeight:400 }}>({r.tipo||"residencial"})</span></div>
+                            {r.lat && r.lng && <a href={`https://maps.google.com/?q=${r.lat},${r.lng}`} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{ background:"#dcfce7", color:"#15803d", padding:"4px 10px", borderRadius:8, fontSize:12, fontWeight:600, textDecoration:"none" }}>🗺 Maps</a>}
+                          </div>
+                          <div style={{ fontSize:13, color:"#64748b", marginBottom:6 }}>📍 {r.direccion}</div>
+                          {(() => {
+                            const eqs = parseEquipos(r.equipos);
+                            const hasOldData = r.marca || r.modelo || r.serie;
+                            return (eqs.length > 0 || hasOldData) ? (
+                              <div>
+                                {eqs.length > 0 ? eqs.map((eq,i) => (
+                                  <div key={i} style={{ background:"#f0f9ff", border:"1px solid #bae6fd", borderRadius:10, padding:"10px 12px", marginBottom:6 }}>
+                                    <div style={{ fontSize:12, fontWeight:700, color:"#0369a1", marginBottom:4 }}>❄️ Equipo {eqs.length>1?i+1:""}</div>
+                                    {eq.desc && <div style={{ fontSize:13, color:"#475569" }}>📋 {eq.desc}</div>}
+                                    {eq.marca && <div style={{ fontSize:13, color:"#475569" }}>🏷️ <b>Marca:</b> {eq.marca}</div>}
+                                    {eq.modelo && <div style={{ fontSize:13, color:"#475569" }}>📐 <b>Modelo:</b> {eq.modelo}</div>}
+                                    {eq.serie && <div style={{ fontSize:13, color:"#475569" }}>🔢 <b>No. Serie:</b> {eq.serie}</div>}
+                                    {eq.fecha && <div style={{ fontSize:13, color:"#475569" }}>📅 <b>Instalado:</b> {fmt(eq.fecha)}</div>}
+                                    {eq.fecha && <div style={{ fontSize:12, color:"#15803d", fontWeight:600, marginTop:4 }}>🔧 Próx: {fmt(nextMant(eq.fecha))} ({diasParaMant(eq.fecha)}d)</div>}
+                                  </div>
+                                )) : (
+                                  <div style={{ background:"#f0f9ff", border:"1px solid #bae6fd", borderRadius:10, padding:"10px 12px" }}>
+                                    <div style={{ fontSize:12, fontWeight:700, color:"#0369a1", marginBottom:4 }}>❄️ Equipo</div>
+                                    {r.marca && <div style={{ fontSize:13, color:"#475569" }}>🏷️ <b>Marca:</b> {r.marca}</div>}
+                                    {r.modelo && <div style={{ fontSize:13, color:"#475569" }}>📐 <b>Modelo:</b> {r.modelo}</div>}
+                                    {r.serie && <div style={{ fontSize:13, color:"#475569" }}>🔢 <b>No. Serie:</b> {r.serie}</div>}
+                                    {r.fecha_instalacion && <div style={{ fontSize:13, color:"#475569" }}>📅 <b>Instalado:</b> {fmt(r.fecha_instalacion)}</div>}
+                                  </div>
+                                )}
+                              </div>
+                            ) : null;
+                          })()}
                         </div>
-                        {r.lat && r.lng && <a href={`https://maps.google.com/?q=${r.lat},${r.lng}`} target="_blank" rel="noreferrer" style={{ background:"#dcfce7", color:"#15803d", padding:"6px 12px", borderRadius:8, fontSize:12, fontWeight:600, textDecoration:"none" }}>🗺 Maps</a>}
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
               {clientes.length === 0 && <div style={{ textAlign:"center", padding:40, color:"#94a3b8" }}>Sin clientes aun. Agrega el primero.</div>}
@@ -599,7 +753,7 @@ function Portal() {
   const [resModal, setResModal] = useState(false);
   const [editResModal, setEditResModal] = useState(false);
   const [editResData, setEditResData] = useState(null);
-  const [newRes, setNewRes] = useState({ nombre:"", tipo:"residencial", direccion:"", equipos:"", marca:"", modelo:"", serie:"", fecha_instalacion:"", lat:null, lng:null });
+  const [newRes, setNewRes] = useState({ nombre:"", tipo:"residencial", direccion:"", equipos:[{desc:"",marca:"",modelo:"",serie:"",fecha:""}], lat:null, lng:null });
   const [gpsLoad, setGpsLoad] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -683,16 +837,19 @@ function Portal() {
   const addResidencia = async () => {
     if (!newRes.nombre || !newRes.direccion) return;
     try {
+      const eq = newRes.equipos.filter(e => e.desc||e.marca||e.modelo||e.serie);
+      const primerEq = eq[0] || {};
       await db.createResidencia({
         cliente_id:cliente.id, nombre:newRes.nombre, tipo:newRes.tipo||"residencial", direccion:newRes.direccion,
-        lat:newRes.lat||null, lng:newRes.lng||null, equipos:newRes.equipos||"",
-        marca:newRes.marca||"", modelo:newRes.modelo||"", serie:newRes.serie||"",
-        fecha_instalacion:newRes.fecha_instalacion||null
+        lat:newRes.lat||null, lng:newRes.lng||null,
+        equipos:JSON.stringify(eq),
+        marca:primerEq.marca||"", modelo:primerEq.modelo||"", serie:primerEq.serie||"",
+        fecha_instalacion:primerEq.fecha||null
       });
       const clFull = await db.getClienteByEmail(cliente.email);
       const clActual = Array.isArray(clFull) && clFull.length > 0 ? clFull[0] : cliente;
       setCliente(clActual);
-      setNewRes({ nombre:"", tipo:"residencial", direccion:"", equipos:"", marca:"", modelo:"", serie:"", fecha_instalacion:"", lat:null, lng:null });
+      setNewRes({ nombre:"", tipo:"residencial", direccion:"", equipos:[{desc:"",marca:"",modelo:"",serie:"",fecha:""}], lat:null, lng:null });
       setResModal(false);
     } catch(e) {
       alert("Error al guardar. Intenta de nuevo.");
@@ -855,14 +1012,35 @@ function Portal() {
                     </div>
                     <div style={{ fontSize:14, color:"#475569", marginBottom:6 }}>📍 {r.direccion}</div>
                     {r.equipos && <div style={{ fontSize:13, color:"#64748b", marginBottom:4 }}>❄️ {r.equipos}</div>}
-                    {r.marca && (
-                      <div style={{ background:"#f0f9ff", border:"1px solid #bae6fd", borderRadius:10, padding:"10px 13px", marginTop:6, display:"flex", flexDirection:"column", gap:4 }}>
-                        {r.marca && <div style={{ fontSize:13, color:"#0369a1" }}>🏷️ <b>Marca:</b> {r.marca}</div>}
-                        {r.modelo && <div style={{ fontSize:13, color:"#0369a1" }}>📋 <b>Modelo:</b> {r.modelo}</div>}
-                        {r.serie && <div style={{ fontSize:13, color:"#0369a1" }}>🔢 <b>No. Serie:</b> {r.serie}</div>}
-                        {r.fecha_instalacion && <div style={{ fontSize:13, color:"#0369a1" }}>📅 <b>Instalado:</b> {fmt(r.fecha_instalacion)}</div>}
-                      </div>
-                    )}
+                    {(() => {
+                      const eqs = parseEquipos(r.equipos);
+                      return eqs.length > 0 ? (
+                        <div style={{ marginTop:8 }}>
+                          {eqs.map((eq, i) => (
+                            <div key={i} style={{ background:"#f0f9ff", border:"1px solid #bae6fd", borderRadius:10, padding:"10px 13px", marginBottom:6 }}>
+                              <div style={{ fontSize:12, fontWeight:700, color:"#0369a1", marginBottom:4 }}>❄️ Equipo {eqs.length>1?i+1:""}</div>
+                              {eq.desc && <div style={{ fontSize:13, color:"#475569" }}>📋 {eq.desc}</div>}
+                              {eq.marca && <div style={{ fontSize:13, color:"#475569" }}>🏷️ <b>Marca:</b> {eq.marca}</div>}
+                              {eq.modelo && <div style={{ fontSize:13, color:"#475569" }}>📐 <b>Modelo:</b> {eq.modelo}</div>}
+                              {eq.serie && <div style={{ fontSize:13, color:"#475569" }}>🔢 <b>No. Serie:</b> {eq.serie}</div>}
+                              {eq.fecha && <div style={{ fontSize:13, color:"#475569" }}>📅 <b>Instalado:</b> {fmt(eq.fecha)}</div>}
+                              {eq.fecha && nextMant(eq.fecha) && (
+                                <div style={{ marginTop:4, padding:"5px 8px", background:"#f0fdf4", borderRadius:7, fontSize:12, color:"#15803d", fontWeight:600 }}>
+                                  🔧 Próx. mant: {fmt(nextMant(eq.fecha))} ({diasParaMant(eq.fecha)}d)
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (r.marca ? (
+                        <div style={{ background:"#f0f9ff", border:"1px solid #bae6fd", borderRadius:10, padding:"10px 13px", marginTop:6 }}>
+                          {r.marca && <div style={{ fontSize:13, color:"#0369a1" }}>🏷️ <b>Marca:</b> {r.marca}</div>}
+                          {r.modelo && <div style={{ fontSize:13, color:"#0369a1" }}>📐 <b>Modelo:</b> {r.modelo}</div>}
+                          {r.serie && <div style={{ fontSize:13, color:"#0369a1" }}>🔢 <b>No. Serie:</b> {r.serie}</div>}
+                          {r.fecha_instalacion && <div style={{ fontSize:13, color:"#0369a1" }}>📅 <b>Instalado:</b> {fmt(r.fecha_instalacion)}</div>}
+                        </div>
+                      ) : null);
+                    })()}
                     {next && (
                       <div style={{ background: dias <= 30 ? "#fef9c3" : "#f0fdf4", border:`1px solid ${dias <= 30 ? "#fde68a" : "#bbf7d0"}`, borderRadius:10, padding:"10px 13px", marginTop:8, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                         <div>
@@ -1153,31 +1331,32 @@ function Portal() {
                 <input value={newRes.direccion} onChange={e => setNewRes(p => ({ ...p, direccion:e.target.value }))} placeholder="Calle, Colonia, Ciudad" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#f8fafc", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
               </div>
               <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:12, padding:"12px 14px" }}>
-                <div style={{ fontSize:13, fontWeight:700, color:"#a16207", marginBottom:10 }}>❄️ Equipo de AC</div>
-                <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                  <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>DESCRIPCION</label>
-                    <input value={newRes.equipos} onChange={e => setNewRes(p => ({ ...p, equipos:e.target.value }))} placeholder="Ej: Minisplit 1.5 ton" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#fff", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                  </div>
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-                    <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>MARCA</label>
-                      <input value={newRes.marca||""} onChange={e => setNewRes(p => ({ ...p, marca:e.target.value }))} placeholder="LG, Carrier..." style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#fff", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                    </div>
-                    <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>MODELO</label>
-                      <input value={newRes.modelo||""} onChange={e => setNewRes(p => ({ ...p, modelo:e.target.value }))} placeholder="LV181HV4" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#fff", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                    </div>
-                  </div>
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-                    <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>NO. DE SERIE</label>
-                      <input value={newRes.serie||""} onChange={e => setNewRes(p => ({ ...p, serie:e.target.value }))} placeholder="SN-123456" style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#fff", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                    </div>
-                    <div><label style={{ fontSize:12, fontWeight:600, color:"#64748b", display:"block", marginBottom:4 }}>FECHA INSTALACION</label>
-                      <input type="date" value={newRes.fecha_instalacion||""} onChange={e => setNewRes(p => ({ ...p, fecha_instalacion:e.target.value }))} max={new Date().toISOString().split("T")[0]} style={{ width:"100%", padding:"12px 14px", border:"2px solid #e2e8f0", borderRadius:12, background:"#fff", color:"#0f172a", fontSize:14, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
-                    </div>
-                  </div>
-                  <div style={{ fontSize:12, color:"#64748b", background:"#f8fafc", borderRadius:8, padding:"8px 10px" }}>
-                    💡 Si tienes más de un equipo en esta residencia, agrégalos en la descripción. Ej: "Minisplit 1 ton sala + Minisplit 2 ton cuarto"
-                  </div>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:"#a16207" }}>❄️ Equipos de AC</div>
+                  <button onClick={() => setNewRes(p => ({ ...p, equipos:[...p.equipos, {desc:"",marca:"",modelo:"",serie:"",fecha:""}] }))}
+                    style={{ fontSize:12, color:"#1d6fa4", background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:8, padding:"4px 10px", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>
+                    + Agregar equipo
+                  </button>
                 </div>
+                {newRes.equipos.map((eq, idx) => (
+                  <div key={idx} style={{ background:"#fff", border:"1px solid #fde68a", borderRadius:10, padding:"10px 12px", marginBottom:8 }}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                      <div style={{ fontSize:12, fontWeight:700, color:"#a16207" }}>Equipo {idx+1}</div>
+                      {newRes.equipos.length > 1 && <button onClick={() => setNewRes(p => ({ ...p, equipos:p.equipos.filter((_,i)=>i!==idx) }))} style={{ fontSize:11, color:"#ef4444", background:"#fef2f2", border:"none", borderRadius:6, padding:"2px 8px", cursor:"pointer", fontFamily:"Outfit,sans-serif" }}>✕ Quitar</button>}
+                    </div>
+                    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                      <input value={eq.desc} onChange={e => setNewRes(p => ({ ...p, equipos:p.equipos.map((e,i)=>i===idx?{...e,desc:e.target?.value??e}:e) }))} onChange={e => { const eq2=[...newRes.equipos]; eq2[idx]={...eq2[idx],desc:e.target.value}; setNewRes(p=>({...p,equipos:eq2})); }} placeholder="Descripción (ej: Minisplit 1.5 ton sala)" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                        <input value={eq.marca} onChange={e => { const eq2=[...newRes.equipos]; eq2[idx]={...eq2[idx],marca:e.target.value}; setNewRes(p=>({...p,equipos:eq2})); }} placeholder="Marca (LG, Carrier...)" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                        <input value={eq.modelo} onChange={e => { const eq2=[...newRes.equipos]; eq2[idx]={...eq2[idx],modelo:e.target.value}; setNewRes(p=>({...p,equipos:eq2})); }} placeholder="Modelo" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                      </div>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                        <input value={eq.serie} onChange={e => { const eq2=[...newRes.equipos]; eq2[idx]={...eq2[idx],serie:e.target.value}; setNewRes(p=>({...p,equipos:eq2})); }} placeholder="No. Serie" style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                        <input type="date" value={eq.fecha} onChange={e => { const eq2=[...newRes.equipos]; eq2[idx]={...eq2[idx],fecha:e.target.value}; setNewRes(p=>({...p,equipos:eq2})); }} max={new Date().toISOString().split("T")[0]} style={{ width:"100%", padding:"10px 12px", border:"1px solid #e2e8f0", borderRadius:10, background:"#f8fafc", color:"#0f172a", fontSize:13, fontFamily:"Outfit,sans-serif", outline:"none", boxSizing:"border-box" }} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
               <button onClick={() => getGPS("res")} style={{ background:newRes.lat?"#dcfce7":"#1d6fa4", color:newRes.lat?"#15803d":"#fff", padding:"12px", fontSize:14, borderRadius:12, border:"none", cursor:"pointer", fontFamily:"Outfit,sans-serif", fontWeight:600 }}>
                 {gpsLoad ? "Obteniendo..." : newRes.lat ? "✅ GPS guardado" : "📍 Guardar ubicacion GPS"}
