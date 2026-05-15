@@ -681,9 +681,6 @@ function Portal() {
       alert("Error al guardar. Intenta de nuevo.");
     }
   };
-    setNewRes({ nombre:"", direccion:"", equipos:"", marca:"", modelo:"", serie:"", fecha_instalacion:"", lat:null, lng:null });
-    setResModal(false);
-  };
 
   const agendar = async () => {
     if (!cf.tipo || !cf.fecha || !cf.hora || !cf.residenciaId) return;
