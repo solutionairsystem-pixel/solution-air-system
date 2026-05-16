@@ -1574,3 +1574,17 @@ function Portal() {
         gpsLoad={gpsLoad}
         getGPS={getGPS}
       />
+
+      <ResModal
+        show={resModal}
+        onClose={() => { setResModal(false); setNewRes({ nombre:"", tipo:"residencial", direccion:"", equipos:[{desc:"",marca:"",modelo:"",serie:"",fecha:""}], lat:null, lng:null }); }}
+        newRes={newRes}
+        setNewRes={setNewRes}
+        onSave={addResidencia}
+        gpsLoad={gpsLoad}
+        getGPS={getGPS}
+      />
+
+    </PhoneShell>
+  );
+}
